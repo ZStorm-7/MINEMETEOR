@@ -1,0 +1,360 @@
+{
+  "name": "Minemeteor - Minecraft Knowledge Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "options": {
+          "responseMode": "streaming"
+        }
+      },
+      "id": "5024855d-87be-45f0-89cb-efcc42d7b8b3",
+      "name": "When chat message received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        112
+      ],
+      "webhookId": "87c5a8d1-a70a-4dc7-82f6-9e87391fedcd"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "# SOUL\nYour tone is casual and playful. Your personality is bursting with enthusiasm — you LOVE Minecraft and it shows in every reply. Be upbeat, friendly, and fun. Use natural, relaxed language (a little slang is fine), and let your excitement come through without going overboard.\n\n# IDENTITY\nYour name is Minemeteor. You are a Minecraft knowledge expert who knows every single thing about Minecraft — blocks, mobs, biomes, crafting recipes, redstone, enchantments, potions, farming, combat, Nether and End mechanics, versions and updates (Java and Bedrock), commands, game rules, and community strategies. When you explain something, be accurate and specific. If a detail differs between Java and Bedrock editions, point that out.\n\n# KNOWLEDGE SOURCE\nYou have tools connected to two authoritative Minecraft wikis:\n\nThe official Minecraft Wiki (minecraft.wiki):\n- 'search_minecraft_wiki': search the wiki by keyword to find relevant articles and short summaries. Use this to discover which pages exist for a topic.\n- 'get_minecraft_wiki_page': fetch the full text of a specific wiki page by its exact title. Use this after searching to get complete, detailed information.\n\nThe Minecraft Fandom wiki (minecraft.fandom.com):\n- 'search_minecraft_fandom': search the Fandom wiki by keyword to find relevant articles and short summaries.\n- 'get_minecraft_fandom_page': fetch the full text of a specific Fandom wiki page by its exact title.\n\nPrefer the official Minecraft Wiki (minecraft.wiki) first. Use the Fandom wiki as a second source when the official wiki lacks the info, to cross-check, or when the user specifically asks about it. Always prefer looking things up on the wikis for anything factual — recipes, stats, drop rates, version specifics, mob behavior, coordinates, mechanics. Search first, then fetch the most relevant page(s) for details. Cite what you learned naturally in your answer. If the wiki has no info or the tools fail, say so honestly rather than guessing.\n\n# USER\nYou are talking to a gamer who wants to learn certain things about Minecraft. Answer their questions clearly and helpfully, matching your explanations to what a player would actually need to know in-game. Keep it engaging and practical."
+        }
+      },
+      "id": "42f9aa77-35d0-419f-9f68-1e4cb3f865a5",
+      "name": "Minemeteor",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        224,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-5",
+          "cachedResultName": "Claude Sonnet 5"
+        },
+        "options": {}
+      },
+      "id": "31f5a0c0-6a06-4c90-875f-70c30de1b5c1",
+      "name": "Anthropic Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.6,
+      "position": [
+        0,
+        304
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": null,
+          "name": "Gateway credits",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 30
+      },
+      "id": "3d630d4f-f96d-4a28-8095-0d47a32a1f09",
+      "name": "Conversation Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        176,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Search the official Minecraft Wiki (minecraft.wiki) by keyword. Returns a list of matching article titles with short intro summaries. Use this to find which pages exist for a Minecraft topic before fetching full details.",
+        "url": "https://minecraft.wiki/api.php",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "query"
+            },
+            {
+              "name": "generator",
+              "value": "search"
+            },
+            {
+              "name": "gsrsearch",
+              "value": "={{ $fromAI('searchQuery', 'The Minecraft topic, item, block, mob, or mechanic to search for', 'string') }}"
+            },
+            {
+              "name": "gsrlimit",
+              "value": "5"
+            },
+            {
+              "name": "prop",
+              "value": "extracts"
+            },
+            {
+              "name": "explaintext",
+              "value": "1"
+            },
+            {
+              "name": "exintro",
+              "value": "1"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a7c7a336-21cb-41d0-bae7-16c798abeeac",
+      "name": "search_minecraft_wiki",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [
+        416,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Fetch the full plain-text content of a specific Minecraft Wiki page by its exact title (e.g. \"Diamond Ore\", \"Enderman\", \"Brewing\"). Use the exact title returned by search_minecraft_wiki. Returns the complete article for detailed, accurate answers.",
+        "url": "https://minecraft.wiki/api.php",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "query"
+            },
+            {
+              "name": "titles",
+              "value": "={{ $fromAI('pageTitle', 'The exact title of the Minecraft Wiki page to fetch', 'string') }}"
+            },
+            {
+              "name": "prop",
+              "value": "extracts"
+            },
+            {
+              "name": "explaintext",
+              "value": "1"
+            },
+            {
+              "name": "redirects",
+              "value": "1"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b151d786-8412-45b7-b0d8-c302f35687c4",
+      "name": "get_minecraft_wiki_page",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [
+        544,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Search the Minecraft Fandom wiki (minecraft.fandom.com) by keyword. Returns a list of matching article titles with short intro summaries. Use this to find which Fandom pages exist for a Minecraft topic before fetching full details.",
+        "url": "https://minecraft.fandom.com/api.php",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "query"
+            },
+            {
+              "name": "generator",
+              "value": "search"
+            },
+            {
+              "name": "gsrsearch",
+              "value": "={{ $fromAI('searchQuery', 'The Minecraft topic, item, block, mob, or mechanic to search for', 'string') }}"
+            },
+            {
+              "name": "gsrlimit",
+              "value": "5"
+            },
+            {
+              "name": "prop",
+              "value": "extracts"
+            },
+            {
+              "name": "explaintext",
+              "value": "1"
+            },
+            {
+              "name": "exintro",
+              "value": "1"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "35a0f089-e750-467b-a584-292f86a074cd",
+      "name": "search_minecraft_fandom",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [
+        624,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Fetch the full plain-text content of a specific Minecraft Fandom wiki page by its exact title (e.g. \"Diamond Ore\", \"Enderman\", \"Brewing\"). Use the exact title returned by search_minecraft_fandom. Returns the complete article for detailed, accurate answers.",
+        "url": "https://minecraft.fandom.com/api.php",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "query"
+            },
+            {
+              "name": "titles",
+              "value": "={{ $fromAI('pageTitle', 'The exact title of the Minecraft Fandom wiki page to fetch', 'string') }}"
+            },
+            {
+              "name": "prop",
+              "value": "extracts"
+            },
+            {
+              "name": "explaintext",
+              "value": "1"
+            },
+            {
+              "name": "redirects",
+              "value": "1"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0a3511c5-2b3f-41c7-8ea4-b4927c08ba8f",
+      "name": "get_minecraft_fandom_page",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [
+        752,
+        336
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Minemeteor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Minemeteor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conversation Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Minemeteor",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "search_minecraft_wiki": {
+      "ai_tool": [
+        [
+          {
+            "node": "Minemeteor",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_minecraft_wiki_page": {
+      "ai_tool": [
+        [
+          {
+            "node": "Minemeteor",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "search_minecraft_fandom": {
+      "ai_tool": [
+        [
+          {
+            "node": "Minemeteor",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_minecraft_fandom_page": {
+      "ai_tool": [
+        [
+          {
+            "node": "Minemeteor",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "64d00097-4c37-482b-808d-26df4de361d2",
+  "meta": {
+    "instanceId": "9e871644116ed8cc92f48e052e08336c0a1843a5dcac150cd77411049e9a3f96"
+  },
+  "nodeGroups": [],
+  "id": "i5wKPbGPwBPo90gd",
+  "tags": []
+}

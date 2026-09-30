@@ -1,5 +1,4 @@
 (() => {
-  const cfg = window.MINE_METEOR_CONFIG || {};
   const log = document.getElementById("log");
   const form = document.getElementById("form");
   const input = document.getElementById("input");
@@ -22,32 +21,44 @@
     return d;
   }
 
+  // n8n streams newline-delimited JSON: {type:"begin"|"item"|"end", content?}
   async function ask(message) {
-    if (!cfg.WEBHOOK_URL) {
-      add("The n8n webhook isn't configured yet — set WEBHOOK_URL in config.js.", "bot err");
-      return;
-    }
     add(message, "user");
-    const pending = add("Mining for an answer… ⛏️", "bot");
+    const bot = add("Mining for an answer… ⛏️", "bot");
     btn.disabled = true;
+    let text = "";
     try {
-      const res = await fetch(cfg.WEBHOOK_URL, {
+      const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message, sessionId }),
       });
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      const raw = await res.text();
-      let reply = raw;
-      try {
-        const j = JSON.parse(raw);
-        const o = Array.isArray(j) ? j[0] : j;
-        reply = o.output ?? o.text ?? o.reply ?? o.message ?? raw;
-      } catch {}
-      pending.textContent = String(reply);
+      if (!res.ok) throw new Error(res.status === 429 ? "too many messages, slow down" : "HTTP " + res.status);
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = "";
+      const handle = (line) => {
+        if (!line.trim()) return;
+        try {
+          const j = JSON.parse(line);
+          if (j.type === "item" && typeof j.content === "string") text += j.content;
+          else if (j.output) text += j.output; // non-streaming fallback
+        } catch { text += line; }
+        if (text) { bot.textContent = text; log.scrollTop = log.scrollHeight; }
+      };
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split("\n");
+        buf = lines.pop();
+        lines.forEach(handle);
+      }
+      handle(buf);
+      if (!text) bot.textContent = "Hmm, I got no answer back. Try again!";
     } catch (e) {
-      pending.textContent = "A creeper blew up the connection (" + e.message + "). Try again!";
-      pending.classList.add("err");
+      bot.textContent = "A creeper blew up the connection (" + e.message + "). Try again!";
+      bot.classList.add("err");
     } finally {
       btn.disabled = false;
       log.scrollTop = log.scrollHeight;
