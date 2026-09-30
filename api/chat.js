@@ -1,7 +1,7 @@
 // Vercel serverless version of the /api/chat proxy (same job as server.js).
 module.exports = async (req, res) => {
   if (req.method !== "POST") { res.statusCode = 405; return res.end(); }
-  const url = process.env.N8N_CHAT_URL;
+  const url = process.env.N8N_CHAT_URL || "https://reyanshmandaloju.app.n8n.cloud/webhook/87c5a8d1-a70a-4dc7-82f6-9e87391fedcd/chat"; // public chat-trigger URL; env var overrides
   if (!url) { res.statusCode = 500; return res.end("N8N_CHAT_URL is not set"); }
   const body = req.body && typeof req.body === "object" ? req.body : {};
   const message = String(body.message || "").slice(0, 2000);

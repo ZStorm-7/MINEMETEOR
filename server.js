@@ -6,7 +6,7 @@ const fs = require("fs");
 const path = require("path");
 
 const PORT = process.env.PORT || 3000;
-const N8N_CHAT_URL = process.env.N8N_CHAT_URL || "";
+const N8N_CHAT_URL = process.env.N8N_CHAT_URL || "https://reyanshmandaloju.app.n8n.cloud/webhook/87c5a8d1-a70a-4dc7-82f6-9e87391fedcd/chat"; // public chat-trigger URL; env var overrides
 const PUBLIC = path.join(__dirname, "public");
 const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript", ".png": "image/png", ".svg": "image/svg+xml", ".ico": "image/x-icon" };
 
