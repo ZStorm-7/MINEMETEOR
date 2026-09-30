@@ -13,3 +13,6 @@ Use the **production** chat URL (workflow must be Active — it is). Deploy to a
 (Render, Railway, Fly.io, a VPS) and set `N8N_CHAT_URL` as an environment variable.
 
 Agent prompt files live in `agent/` (they mirror the system message in the n8n workflow).
+
+## Free hosting on Vercel
+Import the repo at vercel.com, set env var `N8N_CHAT_URL`, deploy. `public/` is served as the site and `api/chat.js` is the proxy.
