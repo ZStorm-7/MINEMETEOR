@@ -9,22 +9,15 @@ html{image-rendering:pixelated}
 body{margin:0;min-height:100vh;display:flex;flex-direction:column;background:var(--bg);color:var(--text);font:22px/1.3 var(--body)}
 
 /* night sky: square pixel stars + falling pixel meteors */
-.sky{position:fixed;inset:0;z-index:-2;overflow:hidden;background:
- linear-gradient(#070914,#151038 70%,#26195a);}
-.sky::before{content:"";position:absolute;inset:0;background-repeat:repeat;background-size:280px 280px;
- background-image:
- linear-gradient(#fff,#fff),linear-gradient(#fff,#fff),linear-gradient(#cfe,#cfe),linear-gradient(#fff,#fff),linear-gradient(#ffe9a8,#ffe9a8);
- background-size:4px 4px,4px 4px,4px 4px,8px 8px,4px 4px;
- background-position:30px 40px,150px 90px,230px 200px,90px 170px,200px 20px;
- background-repeat:repeat;animation:twinkle 3s steps(2) infinite}
+.sky{position:fixed;inset:0;z-index:-2;overflow:hidden;background:#0b1a44;transition:background-color 4s ease}
+.sky::before{content:"";position:absolute;top:0;left:0;width:4px;height:4px;background:transparent;box-shadow:663px 308px 0 #cfe8ff,1333px 98px 0 #fff,1681px 1097px 0 #fff,748px 118px 0 #ffe9a8,439px 76px 0 #fff,888px 856px 0 #fff,492px 185px 0 #ffe9a8,869px 121px 0 #ffe9a8,253px 457px 0 #ffe9a8,126px 812px 0 #fff,452px 95px 0 #ffe9a8,1758px 272px 0 #fff,858px 295px 0 #ffe9a8,241px 631px 0 #ffe9a8,1671px 370px 0 #fff,1191px 384px 0 #fff,199px 128px 0 #ffe9a8,122px 421px 0 #cfe8ff,1393px 1088px 0 #cfe8ff,1591px 643px 0 #cfe8ff,1199px 928px 0 #fff,613px 508px 0 #fff,1431px 499px 0 #fff,1176px 614px 0 #ffe9a8,1013px 703px 0 #cfe8ff,589px 149px 0 #fff,1048px 856px 0 #fff,1550px 700px 0 #fff,1001px 863px 0 #fff,1368px 158px 0 #ffe9a8,1173px 642px 0 #fff,1423px 717px 0 #ffe9a8,1017px 934px 0 #fff,1720px 191px 0 #fff,970px 133px 0 #fff,1497px 634px 0 #ffe9a8,1395px 912px 0 #fff,1467px 790px 0 #fff,46px 945px 0 #fff,344px 239px 0 #cfe8ff,120px 446px 0 #fff,264px 507px 0 #cfe8ff,800px 1016px 0 #fff,340px 919px 0 #cfe8ff,1125px 569px 0 #fff,1677px 881px 0 #ffe9a8,570px 850px 0 #fff,1398px 779px 0 #fff,309px 169px 0 #fff,309px 475px 0 #fff,24px 993px 0 #ffe9a8,373px 538px 0 #fff,8px 298px 0 #cfe8ff,1094px 756px 0 #ffe9a8,1159px 652px 0 #fff,1414px 1055px 0 #ffe9a8,1341px 110px 0 #cfe8ff,1842px 803px 0 #cfe8ff,817px 807px 0 #fff,986px 820px 0 #fff,390px 137px 0 #fff,902px 332px 0 #fff,696px 107px 0 #fff,0px 309px 0 #ffe9a8,207px 744px 0 #ffe9a8,52px 144px 0 #fff,1257px 770px 0 #fff,1299px 516px 0 #fff,1233px 745px 0 #cfe8ff,251px 236px 0 #cfe8ff,954px 983px 0 #cfe8ff,638px 175px 0 #fff,209px 701px 0 #fff,980px 330px 0 #ffe9a8,47px 420px 0 #ffe9a8,740px 300px 0 #ffe9a8,1872px 55px 0 #ffe9a8,610px 186px 0 #fff,1061px 751px 0 #fff,728px 456px 0 #ffe9a8,1109px 1029px 0 #fff,1303px 456px 0 #ffe9a8,1661px 399px 0 #fff,1675px 820px 0 #fff,409px 1060px 0 #cfe8ff,728px 59px 0 #fff,1618px 572px 0 #cfe8ff,530px 396px 0 #ffe9a8,705px 915px 0 #fff,746px 164px 0 #fff;animation:twinkle 3s steps(2) infinite}
 @keyframes twinkle{50%{opacity:.55}}
-.m{position:absolute;top:-60px;width:12px;height:12px;background:var(--fire);box-shadow:
-  -12px -12px 0 #ffb454,-24px -24px 0 #ff8a2b99,-36px -36px 0 #ff8a2b55,-48px -48px 0 #ff8a2b22;
-  animation:fall linear infinite}
-.m1{left:75%;animation-duration:5s}
-.m2{left:40%;animation-duration:8s;animation-delay:2s;transform:scale(.7)}
-.m3{left:95%;animation-duration:11s;animation-delay:5s;transform:scale(.5)}
-@keyframes fall{to{transform:translate(-90vh,90vh)}}
+.m{position:absolute;top:-80px;font-style:normal;line-height:1;animation:fall linear infinite;transition:opacity 4s ease}
+.m::before{content:"\2604\FE0F"}
+.m1{left:75%;font-size:44px;animation-duration:5s}
+.m2{left:45%;font-size:30px;animation-duration:8s;animation-delay:2s}
+.m3{left:98%;font-size:22px;animation-duration:11s;animation-delay:5s}
+@keyframes fall{to{transform:translate(-100vh,100vh)}}
 @media (prefers-reduced-motion:reduce){.m,.sky::before{animation:none}.m{display:none}}
 
 /* grass + dirt block ground strip */
@@ -71,3 +64,13 @@ body{margin:0;min-height:100vh;display:flex;flex-direction:column;background:var
 
 footer{position:fixed;bottom:0;left:0;right:0;text-align:center;color:#fff;font-size:18px;padding:4px 8px 6px;text-shadow:2px 2px 0 #000;pointer-events:none}
 @media (max-width:520px){.composer button{font-size:9px;padding:0 10px}.msg{font-size:22px}}
+
+/* after 60s the night ends: navy sky fades to beige (class set in app.js) */
+.sky::before{transition:opacity 4s ease}
+body.day .sky{background:#eadfc8}
+body.day .sky::before,body.day .m{opacity:0}
+body.day .hero h1{color:#2b2112}
+body.day .hero h1 span{color:#e06a12}
+body.day .hero p{color:#3a2f1c;text-shadow:none}
+body.day .hero h1{text-shadow:4px 4px 0 #0000002e}
+body{transition:color 4s ease}
