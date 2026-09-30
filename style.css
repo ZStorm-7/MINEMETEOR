@@ -1,0 +1,30 @@
+:root{--bg:#0b0d1a;--panel:#151933;--line:#2b3163;--text:#e8ebff;--muted:#8d93c7;--accent:#ff7a2f;--accent2:#5be3ff}
+@media (prefers-color-scheme: light){:root{--bg:#0b0d1a}} /* always dark: night-sky theme */
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;flex-direction:column;background:var(--bg);color:var(--text);font:16px/1.5 ui-monospace,Menlo,Consolas,monospace}
+.sky{position:fixed;inset:0;z-index:-1;background:
+ radial-gradient(2px 2px at 20% 30%,#fff8,transparent),radial-gradient(2px 2px at 70% 20%,#fff8,transparent),
+ radial-gradient(1px 1px at 40% 70%,#fff8,transparent),radial-gradient(2px 2px at 85% 60%,#fff8,transparent),
+ linear-gradient(160deg,#0b0d1a,#1a1145)}
+.sky::after{content:"";position:absolute;top:-10%;left:80%;width:3px;height:120px;background:linear-gradient(var(--accent),transparent);transform:rotate(35deg);animation:fall 6s linear infinite}
+@keyframes fall{to{top:110%;left:30%}}
+@media (prefers-reduced-motion:reduce){.sky::after{animation:none;display:none}}
+.hero{text-align:center;padding:32px 16px 8px}
+.hero h1{margin:0;font-size:clamp(28px,6vw,48px);letter-spacing:1px;text-shadow:3px 3px 0 #000}
+.hero h1 span{color:var(--accent)}
+.hero p{color:var(--muted);margin:8px 0 0}
+.chat{flex:1;width:100%;max-width:760px;margin:16px auto;padding:0 16px;display:flex;flex-direction:column;gap:12px}
+.log{flex:1;min-height:40vh;max-height:56vh;overflow-y:auto;background:var(--panel);border:3px solid var(--line);padding:12px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:85%;padding:10px 12px;border:2px solid var(--line);white-space:pre-wrap;word-wrap:break-word}
+.msg.user{align-self:flex-end;background:#26305f}
+.msg.bot{align-self:flex-start;background:#1c2145;border-color:var(--accent)}
+.msg.err{border-color:#ff4d6d;color:#ffb3c1}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button{background:transparent;color:var(--accent2);border:2px dashed var(--line);padding:6px 10px;cursor:pointer;font:inherit;font-size:14px}
+.chips button:hover{border-color:var(--accent2)}
+.composer{display:flex;gap:8px}
+.composer input{flex:1;padding:12px;background:var(--panel);color:var(--text);border:3px solid var(--line);font:inherit}
+.composer input:focus{outline:none;border-color:var(--accent2)}
+.composer button{padding:0 18px;background:var(--accent);color:#000;border:3px solid #000;font:inherit;font-weight:700;cursor:pointer;box-shadow:3px 3px 0 #000}
+.composer button:disabled{opacity:.5;cursor:wait}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
