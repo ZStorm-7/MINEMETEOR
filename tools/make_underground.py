@@ -49,31 +49,33 @@ def ore(kind):
     return b
 
 WB, HB = 24, 6
-rows = []
+rows = []; types = []
 for r in range(HB):
-    row = []
+    row = []; trow = []
     for c in range(WB):
-        if r == 0:   t = dirt() if random.random() < .55 else stone()
-        elif r == HB-1: t = bedrock()
+        kind = 'stone'
+        if r == 0:
+            d = random.random() < .55; t = dirt() if d else stone(); kind = 'dirt' if d else 'stone'
+        elif r == HB-1: t = bedrock(); kind = 'bedrock'
         else:
             roll = random.random(); depth = r / (HB-1)
             kinds = [('coal',.16),('iron',.11),('redstone',.04+.08*depth),('gold',.03+.06*depth),('lapis',.04+.04*depth),('diamond',.05+.12*depth)]
             t = None; acc = 0
             for k, p in kinds:
                 acc += p
-                if roll < acc: t = ore(k); break
+                if roll < acc: t = ore(k); kind = k; break
             t = t or stone()
-        row.append(t)
-    rows.append(row)
+        row.append(t); trow.append(kind)
+    rows.append(row); types.append(trow)
 # guarantee a few diamond blocks in the visible middle rows
 for (c, r) in [(2,2),(7,3),(11,2),(16,4),(21,3),(9,4)]:
-    rows[r][c] = ore('diamond')
+    rows[r][c] = ore('diamond'); types[r][c] = 'diamond'
 # lava pool blocks (drawn as dark scorched stone here; animated lava is overlaid by the page)
 POOLS = [(4,4,2,1),(12,3,1,2),(19,4,3,1)]
 for (c, r, w, h) in POOLS:
     for dy in range(h):
         for dx in range(w):
-            rows[r+dy][c+dx] = base([hexrgb("#3a1a0a"), hexrgb("#4a210c"), hexrgb("#2a1208")])
+            rows[r+dy][c+dx] = base([hexrgb("#3a1a0a"), hexrgb("#4a210c"), hexrgb("#2a1208")]); types[r+dy][c+dx] = 'lava'
 W, H = WB*B, HB*B
 px = [(0,0,0,255)]*(W*H)
 for r in range(HB):
@@ -83,6 +85,8 @@ for r in range(HB):
             for x in range(B):
                 px[(r*B+y)*W + c*B + x] = t[y][x]
 png('public/underground.png', W, H, px)
+import json
+json.dump({'cols': WB, 'rows': HB, 'blocks': types}, open('public/underground.json', 'w'), separators=(',', ':'))   # block map for the page (mineable ores)
 
 # seamless lava tile
 LV = 16

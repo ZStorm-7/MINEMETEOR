@@ -413,7 +413,7 @@
       mx = e.clientX; my = e.clientY;
       pick.classList.add("on");
       const t = e.target;
-      pick.classList.toggle("hover", !!t.closest("button, a, .hist-open, .hist-del"));
+      pick.classList.toggle("hover", !!t.closest("button, a, .hist-open, .hist-del, .ore-hit"));
       pick.classList.toggle("text", !!t.closest("input"));
       if (!swing) place();
       if (reduceMotion) return;
@@ -460,6 +460,140 @@
       swing.onfinish = swing.oncancel = () => { swing = null; place(); };
     });
   }
+
+
+  // ---------- mineable ores: hold the mouse on an ore to crack it, it drops an item into your hotbar ----------
+  const ORE = {  // break time (ms), item colour, particle colours
+    coal:     { ms: 700,  color: "#262626", chips: ["#161616", "#333333", "#4a4a4a"] },
+    iron:     { ms: 900,  color: "#d8af93", chips: ["#d8af93", "#c19b7f", "#f3d8c4"] },
+    gold:     { ms: 1000, color: "#fcee4b", chips: ["#fcee4b", "#e6cf2a", "#fffbb0"] },
+    redstone: { ms: 900,  color: "#d62b2b", chips: ["#d62b2b", "#f04646", "#ff8a8a"] },
+    lapis:    { ms: 900,  color: "#2a4fd0", chips: ["#2a4fd0", "#3a63e0", "#8fb0ff"] },
+    diamond:  { ms: 1400, color: "#4adbe6", chips: ["#4adbe6", "#5decf5", "#e8ffff"] },
+  };
+  const SAVE_KEY = "mm-mine-v1";
+  let mine = { mined: [], inv: {} };
+  try { mine = Object.assign(mine, JSON.parse(localStorage.getItem(SAVE_KEY))); } catch {}
+  const saveMine = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(mine)); } catch {} };
+
+  // hotbar (slots appear once you mine something)
+  const hotbar = document.createElement("div");
+  hotbar.className = "hotbar"; hotbar.setAttribute("aria-label", "Mined items");
+  const slots = {};
+  Object.keys(ORE).forEach((k) => {
+    const s = document.createElement("div"); s.className = "slot"; s.title = k;
+    const i = document.createElement("i"); i.style.background = ORE[k].color;
+    const n = document.createElement("b");
+    s.append(i, n); hotbar.appendChild(s); slots[k] = { el: s, n };
+  });
+  const resetBtn = document.createElement("button");
+  resetBtn.type = "button"; resetBtn.className = "reset"; resetBtn.textContent = "↺"; resetBtn.title = "Respawn all ores";
+  hotbar.appendChild(resetBtn);
+  document.body.appendChild(hotbar);
+  function paintHotbar() {
+    let total = 0;
+    Object.keys(ORE).forEach((k) => { const v = mine.inv[k] || 0; total += v; slots[k].n.textContent = v ? v : ""; slots[k].el.style.opacity = v ? 1 : 0.45; });
+    hotbar.classList.toggle("show", total > 0 || mine.mined.length > 0);
+  }
+  paintHotbar();
+
+  const mapReq = fetch("underground.json").then((r) => r.json()).catch(() => null);
+  const oreEls = new Map();
+  async function buildOres() {
+    const map = await mapReq; if (!map) return;
+    const PER = map.cols * 64, periods = Math.ceil(window.innerWidth / PER) + 1;
+    stoneEl.querySelectorAll(".ore-hit, .mined").forEach((n) => n.remove());
+    oreEls.clear();
+    for (let p = 0; p < periods; p++) {
+      map.blocks.forEach((row, r) => row.forEach((kind, c) => {
+        if (!ORE[kind]) return;
+        const key = `${p}:${c}:${r}`;
+        const pos = `left:${p * PER + c * 64}px;top:${r * 64}px`;
+        if (mine.mined.includes(key)) {
+          const m = document.createElement("div"); m.className = "mined"; m.style.cssText = pos; m.style.animation = "none"; stoneEl.appendChild(m);
+          return;
+        }
+        const d = document.createElement("div");
+        d.className = "ore-hit"; d.dataset.key = key; d.dataset.kind = kind; d.style.cssText = pos;
+        stoneEl.appendChild(d); oreEls.set(key, d);
+      }));
+    }
+  }
+  buildOres(); window.addEventListener("resize", buildOres);
+
+  // crack overlay: a 16x16 canvas that fills with dark crack pixels as you mine
+  const crackOrder = (() => { const cells = []; const seen = new Set(); let x = 8, y = 8;
+    for (let i = 0; i < 160; i++) { const k = x + "," + y; if (!seen.has(k)) { seen.add(k); cells.push([x, y]); }
+      x = Math.max(1, Math.min(14, x + Math.floor(Math.random() * 3) - 1)); y = Math.max(1, Math.min(14, y + Math.floor(Math.random() * 3) - 1));
+      if (i % 25 === 24) { x = 8; y = 8; } }
+    return cells; })();
+
+  let digging = null;
+  function stopDig() { if (digging) { digging.cv.remove(); cancelAnimationFrame(digging.raf); digging = null; } }
+  function startDig(el) {
+    stopDig();
+    const kind = el.dataset.kind, cv = document.createElement("canvas"); cv.width = cv.height = 16; el.appendChild(cv);
+    const g = cv.getContext("2d"), t0 = performance.now(), dur = ORE[kind].ms; let drawn = 0;
+    digging = { el, cv, raf: 0 };
+    const tick = (now) => {
+      if (!digging || digging.el !== el) return;
+      const f = Math.min(1, (now - t0) / dur), want = Math.floor(f * crackOrder.length * 0.75);
+      g.fillStyle = "#000000cc";
+      for (; drawn < want; drawn++) { const [cx, cy] = crackOrder[drawn]; g.fillRect(cx, cy, 1, 1); }
+      if (!reduceMotion && Math.random() < 0.25) {      // little chips while digging
+        const r = el.getBoundingClientRect();
+        parts.push({ x: r.left + rnd(10, 54), y: r.top + rnd(10, 54), vx: rnd(-1.5, 1.5), vy: rnd(-2, 0), g: 0.25, life: 20, max: 20, size: 4, color: pick(ORE[kind].chips) });
+        if (!running) { running = true; requestAnimationFrame(stepFx); }
+      }
+      if (f >= 1) { breakOre(el); return; }
+      digging.raf = requestAnimationFrame(tick);
+    };
+    digging.raf = requestAnimationFrame(tick);
+  }
+  function breakOre(el) {
+    const kind = el.dataset.kind, key = el.dataset.key, r = el.getBoundingClientRect();
+    const cx = r.left + 32, cy = r.top + 32;
+    stopDig();
+    const m = document.createElement("div"); m.className = "mined"; m.style.cssText = `left:${el.style.left};top:${el.style.top}`;
+    stoneEl.appendChild(m); el.remove(); oreEls.delete(key);
+    mine.mined.push(key); saveMine();
+    for (let i = 0; i < 26; i++) {                       // block-break burst
+      const a = rnd(0, Math.PI * 2), s = rnd(1.5, 5.5);
+      parts.push({ x: cx, y: cy, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 1.5, g: 0.35, life: rnd(22, 40), max: 40, size: snap(rnd(4, 10)), color: pick(ORE[kind].chips) });
+    }
+    if (!running) { running = true; requestAnimationFrame(stepFx); }
+    // the dropped item flies into its hotbar slot
+    hotbar.classList.add("show");
+    const drop = document.createElement("div"); drop.className = "drop"; drop.style.background = ORE[kind].color;
+    drop.style.left = cx - 10 + "px"; drop.style.top = cy - 10 + "px"; document.body.appendChild(drop);
+    const sr = slots[kind].el.getBoundingClientRect();
+    const dx = sr.left + sr.width / 2 - cx, dy = sr.top + sr.height / 2 - cy;
+    const fin = () => { drop.remove(); mine.inv[kind] = (mine.inv[kind] || 0) + 1; saveMine(); paintHotbar();
+      slots[kind].el.classList.remove("bump"); void slots[kind].el.offsetWidth; slots[kind].el.classList.add("bump"); };
+    if (reduceMotion) return fin();
+    const an = drop.animate([{ transform: "translate(0,0) scale(1)" }, { transform: `translate(${dx * 0.3}px, ${dy * 0.3 - 40}px) scale(1.3)`, offset: 0.35 }, { transform: `translate(${dx}px, ${dy}px) scale(.6)` }],
+      { duration: 650, easing: "ease-in" });
+    an.onfinish = fin;
+  }
+  stoneEl.addEventListener("pointerdown", (e) => { const el = e.target.closest(".ore-hit"); if (el && e.button === 0) { e.preventDefault(); startDig(el); } });
+  ["pointerup", "pointercancel"].forEach((ev) => window.addEventListener(ev, stopDig));
+  stoneEl.addEventListener("pointerleave", stopDig, true);
+  stoneEl.addEventListener("pointerout", (e) => { if (digging && !e.relatedTarget?.closest?.(".ore-hit")) stopDig(); });
+  resetBtn.addEventListener("click", () => { mine = { mined: [], inv: {} }; saveMine(); paintHotbar(); buildOres(); });
+
+  // clicking the planted sword makes it wobble and throw sparkles
+  const sword = document.getElementById("groundSword");
+  sword.addEventListener("click", (e) => {
+    e.stopPropagation();
+    sword.classList.remove("wobble"); void sword.offsetWidth; sword.classList.add("wobble");
+    if (reduceMotion) return;
+    const r = sword.getBoundingClientRect();
+    for (let i = 0; i < 26; i++) {
+      parts.push({ x: r.left + r.width / 2 + rnd(-10, 10), y: r.top + rnd(10, r.height * 0.7), vx: rnd(-2.5, 2.5), vy: rnd(-3.5, -0.5), g: 0.12,
+        life: rnd(22, 40), max: 40, size: snap(rnd(4, 8)), color: pick(["#e8ffff", "#5decf5", "#4adbe6", "#ffe27a"]), shrink: true });
+    }
+    if (!running) { running = true; requestAnimationFrame(stepFx); }
+  });
 
   // click empty sky/background = small boom; click the logo = BIG boom
   document.addEventListener("click", (e) => {

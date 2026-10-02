@@ -36,7 +36,7 @@ body.day .sun{opacity:1}
 body.day .cloud{opacity:.95}
 
 /* ground: textured grass + dirt blocks */
-.ground{position:relative;flex-shrink:0;height:536px;margin-top:40px;background:var(--grasstop) 0 0/192px 54px repeat-x,var(--dirt) 0 48px/96px 96px repeat}
+.ground{position:relative;flex-shrink:0;height:536px;margin-top:84px;background:var(--grasstop) 0 0/192px 54px repeat-x,var(--dirt) 0 48px/96px 96px repeat}
 .ground::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:54px;background:var(--blades) 0 100%/288px 54px repeat-x}
 
 /* title: chunky extruded block letters */
@@ -165,3 +165,33 @@ body.day .moon{opacity:0}
 .cursor-btn:hover{background:#d7dbff;color:#222}
 @media (pointer:coarse){.cursor-btn{display:none}}
 .pick{transition:opacity .15s,filter .15s}
+
+/* pixel-art diamond sword planted in the grass */
+.ground-sword{position:absolute;left:2.5%;bottom:calc(100% - 26px);width:64px;height:128px;z-index:2;image-rendering:pixelated;
+  transform-origin:50% 100%;filter:drop-shadow(0 0 6px #4adbe666)}
+.ground-sword:hover{filter:drop-shadow(0 0 10px #4adbe6) brightness(1.1)}
+.ground-sword.wobble{animation:wobble .6s steps(8)}
+@keyframes wobble{0%,100%{transform:rotate(0)}20%{transform:rotate(-7deg)}40%{transform:rotate(6deg)}60%{transform:rotate(-4deg)}80%{transform:rotate(2deg)}}
+@media (max-width:520px){.ground-sword{left:3%;width:48px;height:96px;bottom:calc(100% - 20px)}}
+@media (prefers-reduced-motion:reduce){.ground-sword.wobble{animation:none}}
+
+/* ---------- mineable ores ---------- */
+.ore-hit{position:absolute;width:64px;height:64px;z-index:1}
+.ore-hit canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;pointer-events:none;opacity:.9}
+.mined{position:absolute;width:64px;height:64px;pointer-events:none;z-index:1;
+  background:radial-gradient(circle at 50% 50%,#25252e 0 35%,#14141b 90%);
+  box-shadow:inset 6px 6px 0 #0c0c11,inset -6px -6px 0 #2f2f3a;animation:pop .18s steps(3)}
+@keyframes pop{from{transform:scale(1.15);filter:brightness(1.8)}to{transform:scale(1);filter:none}}
+/* hotbar */
+.hotbar{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);z-index:8;display:flex;gap:4px;padding:4px;
+  background:#00000099;border:4px solid #000;opacity:0;pointer-events:none;transition:opacity .3s}
+.hotbar.show{opacity:1;pointer-events:auto}
+.slot{position:relative;width:46px;height:46px;background:#8b8b8b;border:3px solid;border-color:#373737 #fff #fff #373737;display:flex;align-items:center;justify-content:center}
+.slot i{display:block;width:26px;height:26px;image-rendering:pixelated;box-shadow:inset -4px -4px 0 #0003,inset 4px 4px 0 #fff4}
+.slot b{position:absolute;right:2px;bottom:-2px;font:11px var(--px);color:#fff;text-shadow:2px 2px 0 #000}
+.slot.bump{animation:bump .25s steps(3)}
+@keyframes bump{50%{transform:translateY(-6px) scale(1.12)}}
+.hotbar button.reset{width:46px;height:46px;border:3px solid #000;background:#6f6f6f;color:#fff;font:16px var(--body);cursor:pointer;
+  box-shadow:inset 3px 3px 0 #b4b4b4,inset -3px -3px 0 #3b3b3b}
+.drop{position:fixed;z-index:9;width:20px;height:20px;pointer-events:none;image-rendering:pixelated;box-shadow:inset -4px -4px 0 #0003,inset 4px 4px 0 #fff4}
+@media (max-width:520px){.slot{width:38px;height:38px}.slot i{width:20px;height:20px}.hotbar button.reset{width:38px;height:38px}}
