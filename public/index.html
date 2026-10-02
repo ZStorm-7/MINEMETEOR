@@ -21,12 +21,12 @@
 </header>
 <main class="chat">
   <div id="log" class="log" role="log" aria-live="polite"></div>
-  <div class="chips" id="chips">
-    <button>How do I craft an anvil?</button>
-    <button>Where do I find diamonds?</button>
-    <button>How do I build a redstone clock?</button>
+  <div class="menu" id="menu" hidden>
+    <div class="tabs" id="tabs" role="tablist"></div>
+    <div class="qs" id="qs"></div>
   </div>
   <form id="form" class="composer">
+    <button type="button" id="menuBtn" class="menu-btn" aria-expanded="false" aria-controls="menu">☰ Menu</button>
     <input id="input" autocomplete="off" placeholder="Ask Mine Meteor anything…" aria-label="Message" required>
     <button type="submit">Send ⛏️</button>
   </form>
