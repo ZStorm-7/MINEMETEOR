@@ -274,6 +274,8 @@
   const ctx = fx.getContext("2d");
   const flashEl = document.getElementById("flash");
   let parts = [], running = false;
+  const groundEl = document.querySelector(".ground");
+  const surfaceY = () => groundEl.getBoundingClientRect().top;   // grass line in viewport coords
   function sizeFx() { fx.width = window.innerWidth; fx.height = window.innerHeight; }
   sizeFx(); window.addEventListener("resize", sizeFx);
   const rnd = (a, b) => a + Math.random() * (b - a);
@@ -284,26 +286,27 @@
   const DEBRIS = ["#5a3d27", "#7a5539", "#6b6b6b", "#8b8b8b", "#3a3a3a"];
 
   function boom(x, y, big) {
+    const floor = Math.min(y + 6, surfaceY() + 2);   // debris/fire never sink below the grass
     const n = big ? 130 : 30, sp = big ? 11 : 6;
     for (let i = 0; i < n; i++) {                     // fire burst
       const a = rnd(0, Math.PI * 2), s = rnd(1, sp);
-      parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 1, g: 0.12, life: rnd(20, big ? 46 : 30), max: 46,
+      parts.push({ floor, x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 1, g: 0.12, life: rnd(20, big ? 46 : 30), max: 46,
         size: snap(rnd(big ? 8 : 4, big ? 20 : 10)), color: pick(FIRE), shrink: true });
     }
     for (let i = 0; i < (big ? 46 : 12); i++) {       // rising smoke
       const a = rnd(0, Math.PI * 2), s = rnd(0.3, sp * 0.45);
-      parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - rnd(0.5, 1.6), g: -0.02, life: rnd(40, big ? 90 : 60), max: 90,
+      parts.push({ floor, x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - rnd(0.5, 1.6), g: -0.02, life: rnd(40, big ? 90 : 60), max: 90,
         size: snap(rnd(big ? 12 : 8, big ? 32 : 16)), color: pick(SMOKE), fade: true });
     }
     for (let i = 0; i < (big ? 38 : 9); i++) {        // block debris with gravity
       const a = rnd(-Math.PI, 0), s = rnd(3, sp * 1.1);
-      parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, g: 0.35, life: rnd(40, 80), max: 80,
+      parts.push({ floor, bounce: true, x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, g: 0.35, life: rnd(40, 80), max: 80,
         size: snap(rnd(4, big ? 12 : 8)), color: pick(DEBRIS) });
     }
     if (big) {                                         // expanding blocky shockwave ring
       for (let i = 0; i < 28; i++) {
         const a = (i / 28) * Math.PI * 2;
-        parts.push({ x, y, vx: Math.cos(a) * 9, vy: Math.sin(a) * 9, g: 0, life: 16, max: 16, size: 12, color: "#ffe9a8", fade: true });
+        parts.push({ floor, x, y, vx: Math.cos(a) * 9, vy: Math.sin(a) * 9, g: 0, life: 16, max: 16, size: 12, color: "#ffe9a8", fade: true });
       }
       if (!reduceMotion) {
         flashEl.classList.remove("on"); void flashEl.offsetWidth; flashEl.classList.add("on");
@@ -319,20 +322,32 @@
     parts = parts.filter((p) => p.life > 0);
     for (const p of parts) {
       p.x += p.vx; p.y += p.vy; p.vy += p.g; p.vx *= 0.97; p.life--;
+      if (p.floor !== undefined && p.y > p.floor) {      // hit the grass line: settle on it
+        p.y = p.floor; p.vy = p.bounce ? -Math.abs(p.vy) * 0.3 : 0; p.vx *= 0.6;
+      }
       const t = p.life / p.max;
       const s = p.shrink ? Math.max(4, snap(p.size * Math.min(1, t * 2))) : p.size;
       ctx.globalAlpha = p.fade ? Math.max(0, Math.min(1, t * 1.6)) : 1;
       ctx.fillStyle = p.color;
-      ctx.fillRect(snap(p.x), snap(p.y), s, s);
+      if (p.star) { const X = snap(p.x), Y = snap(p.y); ctx.fillRect(X - 4, Y, 12, 4); ctx.fillRect(X, Y - 4, 4, 12); }
+      else ctx.fillRect(snap(p.x), snap(p.y), s, s);
     }
+    const gh = window.__ghosts ? window.__ghosts() : [];
+    for (const g of gh) {                              // fading pixel afterimages
+      g.life--;
+      if (g.life > 0 && window.__cur) { const c = window.__cur(); ctx.globalAlpha = g.life / 10 * 0.28; ctx.imageSmoothingEnabled = false; ctx.drawImage(window.__ghostImg(), g.x - c.hx, g.y - c.hy, c.size, c.size); }
+    }
+    if (gh.length) gh.splice(0, gh.length, ...gh.filter((g) => g.life > 0));
     ctx.globalAlpha = 1;
-    if (parts.length) requestAnimationFrame(stepFx); else running = false;
+    if (parts.length || gh.length) requestAnimationFrame(stepFx); else running = false;
   }
 
   // a textured meteor crashes in, then explodes where it lands
   function strike(big) {
+    const surf = surfaceY();
+    if (surf < 80 || surf > window.innerHeight - 20) return;   // grass not in view -> don't crash into the underground
     const x = rnd(window.innerWidth * 0.08, window.innerWidth * 0.92);
-    const y = window.innerHeight - rnd(40, 120);
+    const y = surf - 6;
     const size = big ? 140 : 72, D = y + size + 40;
     const img = document.createElement("img");
     img.src = "meteor.svg"; img.alt = ""; img.className = "strike"; img.style.width = img.style.height = size + "px";
@@ -345,24 +360,54 @@
     );
     anim.onfinish = () => { img.remove(); boom(x, y, big); };
   }
+  window.__mm = { strike, boom };   // handy for manual testing in the console
   if (!reduceMotion) {
     const later = (fn, lo, hi) => setTimeout(() => { if (!document.hidden) fn(); later(fn, lo, hi); }, rnd(lo, hi));
     later(() => strike(false), 6000, 11000);
     later(() => strike(true), 35000, 55000);
   }
 
-  // ---------- animated pickaxe cursor ----------
+  // ---------- custom animated cursors (pickaxe / sword / torch / meteor / arrow) ----------
+  const CURSORS = {
+    pickaxe: { src: "pickaxe.svg", icon: "⛏️", hx: 39, hy: 24, size: 48, spark: ["#e8ffff", "#5decf5", "#4adbe6"] },
+    sword:   { src: "sword.svg",   icon: "⚔️", hx: 45, hy: 5,  size: 48, spark: ["#e8ffff", "#5decf5", "#b5b5b5"] },
+    torch:   { src: "torch.svg",   icon: "🔥", hx: 24, hy: 8,  size: 48, spark: ["#fff3b0", "#ffd23f", "#ff9a2b"] },
+    meteor:  { src: "meteor.svg",  icon: "☄️", hx: 14, hy: 34, size: 48, spark: ["#fff3b0", "#ff9a2b", "#e8501a"] },
+    arrow:   { src: "arrow.svg",   icon: "🖱️", hx: 3,  hy: 3,  size: 48, spark: ["#ffffff", "#c6c6c6", "#8b8b8b"] },
+  };
+  const ORDER = Object.keys(CURSORS);
+  ORDER.forEach((k) => { new Image().src = CURSORS[k].src; });   // preload so switching is instant
   if (window.matchMedia("(pointer: fine)").matches) {
     document.documentElement.classList.add("has-cursor");
+    let curName = "pickaxe";
+    try { const s = localStorage.getItem("mm-cursor"); if (CURSORS[s]) curName = s; } catch {}
     const pick = document.createElement("img");
-    pick.src = "pickaxe.svg"; pick.alt = ""; pick.className = "pick";
+    pick.alt = ""; pick.className = "pick";
     document.body.appendChild(pick);
-    const HX = 39, HY = 24; // hotspot = lower tip of the pickaxe head (in the 48px sprite)
-    let mx = -100, my = -100, swing = null, lastTrail = 0;
-    const SPARK = ["#e8ffff", "#5decf5", "#4adbe6", "#ffd23f"];
-    const CHIP = ["#7a5539", "#8b8b8b", "#6b6b6b", "#5f5f5f", "#4adbe6"];
-    const place = (rot = 0) => { pick.style.transform = `translate(${mx - HX}px, ${my - HY}px) rotate(${rot}deg)`; };
+    const cbtn = document.createElement("button");
+    cbtn.type = "button"; cbtn.className = "cursor-btn"; cbtn.title = "Change cursor";
+    document.body.appendChild(cbtn);
+
+    let mx = -100, my = -100, swing = null, lastTrail = 0, lastX = 0, lastY = 0, ghosts = [], ghostImg = new Image();
+    const cur = () => CURSORS[curName];
+    function applyCursor() {
+      const c = cur();
+      pick.src = c.src; ghostImg.src = c.src;
+      pick.style.width = pick.style.height = c.size + "px";
+      pick.style.transformOrigin = `${c.hx}px ${c.hy}px`;
+      cbtn.textContent = c.icon + " Cursor";
+      try { localStorage.setItem("mm-cursor", curName); } catch {}
+    }
+    applyCursor();
+    cbtn.addEventListener("click", () => {
+      curName = ORDER[(ORDER.indexOf(curName) + 1) % ORDER.length];
+      applyCursor(); place();
+      for (let i = 0; i < 14; i++) addPart({ x: mx, y: my, vx: rnd(-3, 3), vy: rnd(-3, 1), g: 0.1, life: 24, max: 24, size: snap(rnd(4, 8)), color: pick_(cur().spark), shrink: true });
+    });
+
+    const place = (rot = 0) => { const c = cur(); pick.style.transform = `translate(${mx - c.hx}px, ${my - c.hy}px) rotate(${rot}deg)`; };
     const addPart = (o) => { parts.push(o); if (!running) { running = true; requestAnimationFrame(stepFx); } };
+    function pick_(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
     document.addEventListener("mousemove", (e) => {
       mx = e.clientX; my = e.clientY;
@@ -371,31 +416,47 @@
       pick.classList.toggle("hover", !!t.closest("button, a, .hist-open, .hist-del"));
       pick.classList.toggle("text", !!t.closest("input"));
       if (!swing) place();
+      if (reduceMotion) return;
       const now = performance.now();
-      if (!reduceMotion && now - lastTrail > 28) {          // sparkle trail
-        lastTrail = now;
-        addPart({ x: mx + rnd(-4, 4), y: my + rnd(-4, 4), vx: rnd(-0.4, 0.4), vy: rnd(0.2, 0.9), g: 0.03, life: 22, max: 22,
-          size: snap(rnd(4, 8)), color: pick_(SPARK), shrink: true });
+      const speed = Math.min(1, Math.hypot(mx - lastX, my - lastY) / 40);   // faster mouse = fatter trail
+      lastX = mx; lastY = my;
+      if (now - lastTrail < 22) return;
+      lastTrail = now;
+      const c = cur(), k = 1 + Math.round(speed * 3);
+      for (let i = 0; i < k; i++) {
+        const r = Math.random();
+        if (r < 0.45) {                        // sparkles in the cursor's colours
+          addPart({ x: mx + rnd(-6, 6), y: my + rnd(-6, 6), vx: rnd(-0.6, 0.6), vy: rnd(0.1, 1), g: 0.04, life: 24, max: 24,
+            size: snap(rnd(4, 8)), color: pick_(c.spark), shrink: true });
+        } else if (r < 0.7) {                  // rising embers
+          addPart({ x: mx + rnd(-4, 4), y: my + rnd(-2, 6), vx: rnd(-0.3, 0.3), vy: rnd(-1.4, -0.4), g: -0.02, life: 30, max: 30,
+            size: snap(rnd(4, 8)), color: pick_(["#fff3b0", "#ffd23f", "#ff9a2b", "#e8501a"]), shrink: true });
+        } else if (r < 0.88) {                 // twinkling plus-shaped stars
+          addPart({ x: mx + rnd(-10, 10), y: my + rnd(-10, 10), vx: 0, vy: 0.15, g: 0, life: 26, max: 26, size: 4, color: pick_(["#ffffff", "#ffe9a8", "#cfe8ff"]), star: true });
+        } else {                               // tiny falling block crumbs
+          addPart({ x: mx, y: my, vx: rnd(-1, 1), vy: rnd(0, 1), g: 0.25, life: 26, max: 26, size: 4, color: pick_(["#7a5539", "#8b8b8b", "#5f5f5f", "#4adbe6"]) });
+        }
       }
+      ghosts.push({ x: mx, y: my, life: 10 });                                 // pixel afterimages of the cursor
+      if (ghosts.length > 5) ghosts.shift();
+      if (!running) { running = true; requestAnimationFrame(stepFx); }
     });
-    function pick_(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+    window.__ghosts = () => ghosts; window.__ghostImg = () => ghostImg; window.__cur = () => cur();
+
     document.addEventListener("mouseleave", () => pick.classList.remove("on"));
     document.addEventListener("mouseenter", () => pick.classList.add("on"));
 
-    // click = swing the pickaxe + throw block chips
+    // click = swing + block chips
     document.addEventListener("mousedown", () => {
       if (reduceMotion) return;
+      const c = cur();
       for (let i = 0; i < 9; i++) {
         const a = rnd(-Math.PI, 0.2), s = rnd(1.5, 4);
-        addPart({ x: mx, y: my, vx: Math.cos(a) * s, vy: Math.sin(a) * s, g: 0.3, life: rnd(18, 32), max: 32, size: snap(rnd(4, 8)), color: pick_(CHIP) });
+        addPart({ x: mx, y: my, vx: Math.cos(a) * s, vy: Math.sin(a) * s, g: 0.3, life: rnd(18, 32), max: 32, size: snap(rnd(4, 8)), color: pick_(["#7a5539", "#8b8b8b", "#6b6b6b", "#5f5f5f", ...c.spark]) });
       }
       if (swing) swing.cancel();
-      swing = pick.animate(
-        [{ transform: `translate(${mx - HX}px, ${my - HY}px) rotate(0deg)` },
-         { transform: `translate(${mx - HX}px, ${my - HY}px) rotate(-55deg)`, offset: 0.4 },
-         { transform: `translate(${mx - HX}px, ${my - HY}px) rotate(8deg)`, offset: 0.7 },
-         { transform: `translate(${mx - HX}px, ${my - HY}px) rotate(0deg)` }],
-        { duration: 240, easing: "ease-out" });
+      const T = (r) => `translate(${mx - c.hx}px, ${my - c.hy}px) rotate(${r}deg)`;
+      swing = pick.animate([{ transform: T(0) }, { transform: T(-55), offset: 0.4 }, { transform: T(8), offset: 0.7 }, { transform: T(0) }], { duration: 240, easing: "ease-out" });
       swing.onfinish = swing.oncancel = () => { swing = null; place(); };
     });
   }
@@ -403,6 +464,7 @@
   // click empty sky/background = small boom; click the logo = BIG boom
   document.addEventListener("click", (e) => {
     if (e.target.closest("button, input, .log, .menu, .composer, .clock")) return;
+    if (e.clientY > surfaceY()) return;                       // no explosions underground
     boom(e.clientX, e.clientY, !!e.target.closest(".logo"));
   });
 

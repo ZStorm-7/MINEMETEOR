@@ -159,3 +159,9 @@ body.day .moon{opacity:0}
 .pick.hover{filter:drop-shadow(0 0 6px #4adbe6) brightness(1.15)}
 .pick.text{opacity:0!important}
 @media (pointer:coarse){.pick{display:none}}
+
+.cursor-btn{position:fixed;top:58px;right:10px;z-index:8;padding:5px 10px;font:10px var(--px);color:#3f3f3f;background:#c6c6c6;
+  border:4px solid #000;box-shadow:inset 3px 3px 0 #fff,inset -3px -3px 0 #555;letter-spacing:1px}
+.cursor-btn:hover{background:#d7dbff;color:#222}
+@media (pointer:coarse){.cursor-btn{display:none}}
+.pick{transition:opacity .15s,filter .15s}
