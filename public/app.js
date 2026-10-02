@@ -350,6 +350,56 @@
     later(() => strike(false), 6000, 11000);
     later(() => strike(true), 35000, 55000);
   }
+
+  // ---------- animated pickaxe cursor ----------
+  if (window.matchMedia("(pointer: fine)").matches) {
+    document.documentElement.classList.add("has-cursor");
+    const pick = document.createElement("img");
+    pick.src = "pickaxe.svg"; pick.alt = ""; pick.className = "pick";
+    document.body.appendChild(pick);
+    const HX = 39, HY = 24; // hotspot = lower tip of the pickaxe head (in the 48px sprite)
+    let mx = -100, my = -100, swing = null, lastTrail = 0;
+    const SPARK = ["#e8ffff", "#5decf5", "#4adbe6", "#ffd23f"];
+    const CHIP = ["#7a5539", "#8b8b8b", "#6b6b6b", "#5f5f5f", "#4adbe6"];
+    const place = (rot = 0) => { pick.style.transform = `translate(${mx - HX}px, ${my - HY}px) rotate(${rot}deg)`; };
+    const addPart = (o) => { parts.push(o); if (!running) { running = true; requestAnimationFrame(stepFx); } };
+
+    document.addEventListener("mousemove", (e) => {
+      mx = e.clientX; my = e.clientY;
+      pick.classList.add("on");
+      const t = e.target;
+      pick.classList.toggle("hover", !!t.closest("button, a, .hist-open, .hist-del"));
+      pick.classList.toggle("text", !!t.closest("input"));
+      if (!swing) place();
+      const now = performance.now();
+      if (!reduceMotion && now - lastTrail > 28) {          // sparkle trail
+        lastTrail = now;
+        addPart({ x: mx + rnd(-4, 4), y: my + rnd(-4, 4), vx: rnd(-0.4, 0.4), vy: rnd(0.2, 0.9), g: 0.03, life: 22, max: 22,
+          size: snap(rnd(4, 8)), color: pick_(SPARK), shrink: true });
+      }
+    });
+    function pick_(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+    document.addEventListener("mouseleave", () => pick.classList.remove("on"));
+    document.addEventListener("mouseenter", () => pick.classList.add("on"));
+
+    // click = swing the pickaxe + throw block chips
+    document.addEventListener("mousedown", () => {
+      if (reduceMotion) return;
+      for (let i = 0; i < 9; i++) {
+        const a = rnd(-Math.PI, 0.2), s = rnd(1.5, 4);
+        addPart({ x: mx, y: my, vx: Math.cos(a) * s, vy: Math.sin(a) * s, g: 0.3, life: rnd(18, 32), max: 32, size: snap(rnd(4, 8)), color: pick_(CHIP) });
+      }
+      if (swing) swing.cancel();
+      swing = pick.animate(
+        [{ transform: `translate(${mx - HX}px, ${my - HY}px) rotate(0deg)` },
+         { transform: `translate(${mx - HX}px, ${my - HY}px) rotate(-55deg)`, offset: 0.4 },
+         { transform: `translate(${mx - HX}px, ${my - HY}px) rotate(8deg)`, offset: 0.7 },
+         { transform: `translate(${mx - HX}px, ${my - HY}px) rotate(0deg)` }],
+        { duration: 240, easing: "ease-out" });
+      swing.onfinish = swing.oncancel = () => { swing = null; place(); };
+    });
+  }
+
   // click empty sky/background = small boom; click the logo = BIG boom
   document.addEventListener("click", (e) => {
     if (e.target.closest("button, input, .log, .menu, .composer, .clock")) return;
