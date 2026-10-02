@@ -97,9 +97,13 @@
   });
   const follow = () => { if (pinned) log.scrollTop = log.scrollHeight; };
 
-  function add(text, cls) {
+  const fmtTime = (ts) => new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const fmtStamp = (ts) => new Date(ts).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+
+  function add(text, cls, ts) {
     const d = document.createElement("div");
     d.className = "msg " + cls;
+    if (ts) d.dataset.time = "  ·  " + fmtTime(ts);
     d.textContent = text; // textContent: never render model output as HTML
     log.appendChild(d);
     if (cls === "user") pinned = true;
@@ -110,18 +114,19 @@
   function render() {
     log.textContent = "";
     add(GREETING, "bot");
-    chat.msgs.forEach((m) => add(m.t, m.r === "user" ? "user" : "bot"));
+    chat.msgs.forEach((m) => add(m.t, m.r === "user" ? "user" : "bot", m.ts));
     pinned = true; follow();
   }
 
   // ---------- talking to n8n (streamed newline-delimited JSON) ----------
   async function ask(message) {
     const c = chat; // keep writing to this chat even if the reader switches away mid-answer
-    c.msgs.push({ r: "user", t: message });
+    const sent = Date.now();
+    c.msgs.push({ r: "user", t: message, ts: sent });
     if (c.title === "New chat") c.title = message.slice(0, 40);
-    c.ts = Date.now(); save();
-    add(message, "user");
-    const bot = add("Mining for an answer… ⛏️", "bot");
+    c.ts = sent; save();
+    add(message, "user", sent);
+    const bot = add("Mining for an answer… ⛏️", "bot", sent);
     btn.disabled = true;
     let text = "", raf = 0;
     const paint = () => { raf = 0; if (text) { bot.textContent = text; follow(); } }; // batch DOM work: smooth scrolling on huge answers
@@ -155,7 +160,11 @@
       handle(buf);
       if (raf) cancelAnimationFrame(raf);
       if (!text) { text = "Hmm, I got no answer back. Try again!"; bot.classList.add("err"); }
-      else c.msgs.push({ r: "bot", t: text.slice(0, 20000) });
+      else {
+        const done = Date.now();
+        c.msgs.push({ r: "bot", t: text.slice(0, 20000), ts: done });
+        c.ts = done; bot.dataset.time = "  ·  " + fmtTime(done);
+      }
       bot.textContent = text;
     } catch (e) {
       if (raf) cancelAnimationFrame(raf);
@@ -220,7 +229,7 @@
       row.className = "hist-row" + (c.id === chat.id ? " current" : "");
       const open = document.createElement("button");
       open.type = "button"; open.className = "hist-open";
-      open.textContent = "💬 " + c.title + "  ·  " + new Date(c.ts).toLocaleDateString();
+      open.textContent = "💬 " + c.title + "  ·  " + fmtStamp(c.ts);
       open.addEventListener("click", () => { chat = c; store.current = c.id; save(); render(); closePanels(); });
       const del = document.createElement("button");
       del.type = "button"; del.className = "hist-del"; del.textContent = "✕"; del.title = "Delete chat";
