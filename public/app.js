@@ -73,12 +73,20 @@
     try { localStorage.setItem("mm-session", sessionId); } catch {}
   }
 
+  // only auto-follow new text while the reader is at the bottom; scrolling up releases it
+  let pinned = true;
+  log.addEventListener("scroll", () => {
+    pinned = log.scrollHeight - log.scrollTop - log.clientHeight < 80;
+  });
+  const follow = () => { if (pinned) log.scrollTop = log.scrollHeight; };
+
   function add(text, cls) {
     const d = document.createElement("div");
     d.className = "msg " + cls;
     d.textContent = text; // textContent: never render model output as HTML
     log.appendChild(d);
-    log.scrollTop = log.scrollHeight;
+    if (cls === "user") pinned = true;
+    follow();
     return d;
   }
 
@@ -105,7 +113,7 @@
           if (j.type === "item" && typeof j.content === "string") text += j.content;
           else if (j.output) text += j.output; // non-streaming fallback
         } catch { text += line; }
-        if (text) { bot.textContent = text; log.scrollTop = log.scrollHeight; }
+        if (text) { bot.textContent = text; follow(); }
       };
       for (;;) {
         const { done, value } = await reader.read();
@@ -122,7 +130,7 @@
       bot.classList.add("err");
     } finally {
       btn.disabled = false;
-      log.scrollTop = log.scrollHeight;
+      follow();
     }
   }
 
