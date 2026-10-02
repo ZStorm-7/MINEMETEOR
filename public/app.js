@@ -6,6 +6,9 @@
   const tabs = document.getElementById("tabs");
   const qs = document.getElementById("qs");
   const menuBtn = document.getElementById("menuBtn");
+  const histBtn = document.getElementById("histBtn");
+  const hist = document.getElementById("history");
+  const chatEl = document.querySelector(".chat");
   const MENU = {
     "⚒ Crafting": [
       "What are all the ingredients and the exact crafting recipe for an anvil, and how do I repair it?",
@@ -64,19 +67,33 @@
       "What does each gamerule do, and which ones are most useful for servers?"
     ]
   };
-  const btn = form.querySelector("button");
+  const btn = form.querySelector("button.send");
+  const GREETING = "Meteor incoming! ☄️ What are we digging into today?";
 
-  let sessionId;
-  try { sessionId = localStorage.getItem("mm-session"); } catch {}
-  if (!sessionId) {
-    sessionId = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()) + Math.random();
-    try { localStorage.setItem("mm-session", sessionId); } catch {}
+  // ---------- chat history (localStorage) ----------
+  const KEY = "mm-chats-v1";
+  const uid = () => (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()) + Math.random();
+  let store = { chats: [], current: null };
+  try { store = JSON.parse(localStorage.getItem(KEY)) || store; } catch {}
+  function save() {
+    store.chats = store.chats.slice(0, 30);
+    try { localStorage.setItem(KEY, JSON.stringify(store)); } catch {}
   }
+  function newChat() {
+    const c = { id: uid(), title: "New chat", ts: Date.now(), msgs: [] };
+    store.chats.unshift(c); store.current = c.id; save();
+    return c;
+  }
+  let chat = store.chats.find((c) => c.id === store.current) || newChat();
 
-  // only auto-follow new text while the reader is at the bottom; scrolling up releases it
+  // ---------- scrolling: never fight the reader ----------
   let pinned = true;
+  const release = () => { pinned = false; };
+  log.addEventListener("wheel", (e) => { if (e.deltaY < 0) release(); }, { passive: true });
+  log.addEventListener("pointerdown", release);          // scrollbar drag / touch start
+  log.addEventListener("keydown", (e) => { if (["ArrowUp", "PageUp", "Home"].includes(e.key)) release(); });
   log.addEventListener("scroll", () => {
-    pinned = log.scrollHeight - log.scrollTop - log.clientHeight < 80;
+    if (log.scrollHeight - log.scrollTop - log.clientHeight < 8) pinned = true; // back at bottom -> follow again
   });
   const follow = () => { if (pinned) log.scrollTop = log.scrollHeight; };
 
@@ -90,17 +107,29 @@
     return d;
   }
 
-  // n8n streams newline-delimited JSON: {type:"begin"|"item"|"end", content?}
+  function render() {
+    log.textContent = "";
+    add(GREETING, "bot");
+    chat.msgs.forEach((m) => add(m.t, m.r === "user" ? "user" : "bot"));
+    pinned = true; follow();
+  }
+
+  // ---------- talking to n8n (streamed newline-delimited JSON) ----------
   async function ask(message) {
+    const c = chat; // keep writing to this chat even if the reader switches away mid-answer
+    c.msgs.push({ r: "user", t: message });
+    if (c.title === "New chat") c.title = message.slice(0, 40);
+    c.ts = Date.now(); save();
     add(message, "user");
     const bot = add("Mining for an answer… ⛏️", "bot");
     btn.disabled = true;
-    let text = "";
+    let text = "", raf = 0;
+    const paint = () => { raf = 0; if (text) { bot.textContent = text; follow(); } }; // batch DOM work: smooth scrolling on huge answers
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, sessionId }),
+        body: JSON.stringify({ message, sessionId: c.id }),
       });
       if (!res.ok) throw new Error(res.status === 429 ? "too many messages, slow down" : "HTTP " + res.status);
       const reader = res.body.getReader();
@@ -113,7 +142,7 @@
           if (j.type === "item" && typeof j.content === "string") text += j.content;
           else if (j.output) text += j.output; // non-streaming fallback
         } catch { text += line; }
-        if (text) { bot.textContent = text; follow(); }
+        if (!raf) raf = requestAnimationFrame(paint);
       };
       for (;;) {
         const { done, value } = await reader.read();
@@ -124,13 +153,31 @@
         lines.forEach(handle);
       }
       handle(buf);
-      if (!text) bot.textContent = "Hmm, I got no answer back. Try again!";
+      if (raf) cancelAnimationFrame(raf);
+      if (!text) { text = "Hmm, I got no answer back. Try again!"; bot.classList.add("err"); }
+      else c.msgs.push({ r: "bot", t: text.slice(0, 20000) });
+      bot.textContent = text;
     } catch (e) {
+      if (raf) cancelAnimationFrame(raf);
       bot.textContent = "A creeper blew up the connection (" + e.message + "). Try again!";
       bot.classList.add("err");
     } finally {
       btn.disabled = false;
-      follow();
+      save(); follow();
+    }
+  }
+
+  // ---------- panels: menu + history ----------
+  function closePanels() {
+    menu.hidden = true; hist.hidden = true;
+    menuBtn.setAttribute("aria-expanded", "false"); histBtn.setAttribute("aria-expanded", "false");
+    chatEl.classList.remove("menu-open");
+  }
+  function openPanel(panel, button) {
+    const wasOpen = !panel.hidden;
+    closePanels();
+    if (!wasOpen) {
+      panel.hidden = false; button.setAttribute("aria-expanded", "true"); chatEl.classList.add("menu-open");
     }
   }
 
@@ -139,16 +186,16 @@
     const m = input.value.trim();
     if (!m) return;
     input.value = "";
-    closeMenu();
+    closePanels();
     ask(m);
   });
-  function closeMenu() { menu.hidden = true; menuBtn.setAttribute("aria-expanded", "false"); document.querySelector(".chat").classList.remove("menu-open"); }
+
   function showCategory(name) {
     qs.textContent = "";
     MENU[name].forEach((q) => {
       const b = document.createElement("button");
       b.type = "button"; b.textContent = q;
-      b.addEventListener("click", () => { closeMenu(); ask(q); });
+      b.addEventListener("click", () => { closePanels(); ask(q); });
       qs.appendChild(b);
     });
     [...tabs.children].forEach((t) => t.classList.toggle("active", t.dataset.cat === name));
@@ -160,15 +207,41 @@
     tabs.appendChild(t);
     if (i === 0) showCategory(name);
   });
-  menuBtn.addEventListener("click", () => {
-    menu.hidden = !menu.hidden;
-    menuBtn.setAttribute("aria-expanded", String(!menu.hidden));
-    document.querySelector(".chat").classList.toggle("menu-open", !menu.hidden);
-  });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenu(); });
+  menuBtn.addEventListener("click", () => openPanel(menu, menuBtn));
+
+  function renderHistory() {
+    hist.textContent = "";
+    const top = document.createElement("button");
+    top.type = "button"; top.className = "hist-new"; top.textContent = "＋ New chat";
+    top.addEventListener("click", () => { chat = newChat(); render(); closePanels(); });
+    hist.appendChild(top);
+    store.chats.filter((c) => c.msgs.length).forEach((c) => {
+      const row = document.createElement("div");
+      row.className = "hist-row" + (c.id === chat.id ? " current" : "");
+      const open = document.createElement("button");
+      open.type = "button"; open.className = "hist-open";
+      open.textContent = "💬 " + c.title + "  ·  " + new Date(c.ts).toLocaleDateString();
+      open.addEventListener("click", () => { chat = c; store.current = c.id; save(); render(); closePanels(); });
+      const del = document.createElement("button");
+      del.type = "button"; del.className = "hist-del"; del.textContent = "✕"; del.title = "Delete chat";
+      del.addEventListener("click", () => {
+        store.chats = store.chats.filter((x) => x.id !== c.id);
+        if (chat.id === c.id) { chat = store.chats[0] || newChat(); store.current = chat.id; render(); }
+        save(); renderHistory();
+      });
+      row.append(open, del);
+      hist.appendChild(row);
+    });
+    if (hist.children.length === 1) {
+      const p = document.createElement("p"); p.className = "hist-empty"; p.textContent = "No saved chats yet — ask something! ⛏️";
+      hist.appendChild(p);
+    }
+  }
+  histBtn.addEventListener("click", () => { renderHistory(); openPanel(hist, histBtn); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closePanels(); });
 
   // navy night sky -> sky blue day after 60 seconds
   setTimeout(() => document.body.classList.add("day"), 60000);
 
-  add("Meteor incoming! ☄️ What are we digging into today?", "bot");
+  render();
 })();

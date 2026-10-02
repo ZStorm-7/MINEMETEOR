@@ -118,3 +118,13 @@ body.day .moon{opacity:0}
   box-shadow:inset 4px 4px 0 #d2b07a,inset -4px -4px 0 #7a5a30}
 .msg.user::before{content:"✎ YOU";color:#4a3213}
 .msg.err{background:#e8b3b3;color:#5a1010;box-shadow:inset 4px 4px 0 #fff,inset -4px -4px 0 #a04040}
+
+/* chat history panel */
+.menu#history{gap:8px}
+.hist-new{font:11px var(--px);padding:10px 12px;background:#4f9a2e!important;box-shadow:inset 3px 3px 0 #8fdc66,inset -3px -3px 0 #2b5c14!important;align-self:flex-start}
+.hist-row{display:flex;gap:8px}
+.hist-open{flex:1;text-align:left;font:22px/1.15 var(--body);padding:8px 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist-row.current .hist-open{background:#7f86d6;color:#ffffa0}
+.hist-del{font:12px var(--px);padding:0 12px;background:#9c3a3a!important;box-shadow:inset 3px 3px 0 #d87a7a,inset -3px -3px 0 #5a1c1c!important}
+.hist-empty{margin:0;color:#fff;font-size:22px;text-shadow:2px 2px 0 #000}
+.menu#history{max-height:34vh;overflow-y:auto}

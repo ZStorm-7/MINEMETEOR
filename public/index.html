@@ -25,10 +25,12 @@
     <div class="tabs" id="tabs" role="tablist"></div>
     <div class="qs" id="qs"></div>
   </div>
+  <div class="menu" id="history" hidden aria-label="Chat history"></div>
   <form id="form" class="composer">
     <button type="button" id="menuBtn" class="menu-btn" aria-expanded="false" aria-controls="menu">☰ Menu</button>
+    <button type="button" id="histBtn" class="menu-btn" aria-expanded="false" aria-controls="history">📜 History</button>
     <input id="input" autocomplete="off" placeholder="Ask Mine Meteor anything…" aria-label="Message" required>
-    <button type="submit">Send ⛏️</button>
+    <button type="submit" class="send">Send ⛏️</button>
   </form>
 </main>
 
