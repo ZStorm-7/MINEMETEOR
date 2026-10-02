@@ -243,5 +243,14 @@
   // navy night sky -> sky blue day after 60 seconds
   setTimeout(() => document.body.classList.add("day"), 60000);
 
+  // clock: local time, icon follows the sky
+  const clockTime = document.getElementById("clockTime");
+  const clockIcon = document.getElementById("clockIcon");
+  function tick() {
+    clockTime.textContent = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    clockIcon.textContent = document.body.classList.contains("day") ? "☀️" : "🌙";
+  }
+  tick(); setInterval(tick, 1000);
+
   render();
 })();
