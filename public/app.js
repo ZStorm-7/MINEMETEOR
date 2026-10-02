@@ -249,6 +249,113 @@
   histBtn.addEventListener("click", () => { renderHistory(); openPanel(hist, histBtn); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closePanels(); });
 
+
+  // ---------- lava pools over the ore grid (blocks are 64px; the underground tile repeats every 1536px) ----------
+  const stoneEl = document.querySelector(".stone");
+  const POOLS = [[4, 4, 2, 1], [12, 3, 1, 2], [19, 4, 3, 1]]; // [col,row,w,h] in blocks, matching tools/make_underground.py
+  function buildLava() {
+    stoneEl.querySelectorAll(".lava").forEach((n) => n.remove());
+    const periods = Math.ceil(window.innerWidth / 1536) + 1;
+    for (let p = 0; p < periods; p++) {
+      POOLS.forEach(([c, r, w, h]) => {
+        const d = document.createElement("div");
+        d.className = "lava";
+        d.style.cssText = `left:${p * 1536 + c * 64}px;top:${r * 64}px;width:${w * 64}px;height:${h * 64}px`;
+        stoneEl.appendChild(d);
+      });
+    }
+  }
+  buildLava();
+  window.addEventListener("resize", buildLava);
+
+  // ---------- explosions: small + large (pixel particles on a canvas) ----------
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const fx = document.getElementById("fx");
+  const ctx = fx.getContext("2d");
+  const flashEl = document.getElementById("flash");
+  let parts = [], running = false;
+  function sizeFx() { fx.width = window.innerWidth; fx.height = window.innerHeight; }
+  sizeFx(); window.addEventListener("resize", sizeFx);
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const snap = (v, g = 4) => Math.round(v / g) * g;
+  const FIRE = ["#fff3b0", "#ffd23f", "#ff9a2b", "#e8501a", "#b3290d"];
+  const SMOKE = ["#4a4a4a", "#666", "#808080", "#9a9a9a"];
+  const DEBRIS = ["#5a3d27", "#7a5539", "#6b6b6b", "#8b8b8b", "#3a3a3a"];
+
+  function boom(x, y, big) {
+    const n = big ? 130 : 30, sp = big ? 11 : 6;
+    for (let i = 0; i < n; i++) {                     // fire burst
+      const a = rnd(0, Math.PI * 2), s = rnd(1, sp);
+      parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 1, g: 0.12, life: rnd(20, big ? 46 : 30), max: 46,
+        size: snap(rnd(big ? 8 : 4, big ? 20 : 10)), color: pick(FIRE), shrink: true });
+    }
+    for (let i = 0; i < (big ? 46 : 12); i++) {       // rising smoke
+      const a = rnd(0, Math.PI * 2), s = rnd(0.3, sp * 0.45);
+      parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - rnd(0.5, 1.6), g: -0.02, life: rnd(40, big ? 90 : 60), max: 90,
+        size: snap(rnd(big ? 12 : 8, big ? 32 : 16)), color: pick(SMOKE), fade: true });
+    }
+    for (let i = 0; i < (big ? 38 : 9); i++) {        // block debris with gravity
+      const a = rnd(-Math.PI, 0), s = rnd(3, sp * 1.1);
+      parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, g: 0.35, life: rnd(40, 80), max: 80,
+        size: snap(rnd(4, big ? 12 : 8)), color: pick(DEBRIS) });
+    }
+    if (big) {                                         // expanding blocky shockwave ring
+      for (let i = 0; i < 28; i++) {
+        const a = (i / 28) * Math.PI * 2;
+        parts.push({ x, y, vx: Math.cos(a) * 9, vy: Math.sin(a) * 9, g: 0, life: 16, max: 16, size: 12, color: "#ffe9a8", fade: true });
+      }
+      if (!reduceMotion) {
+        flashEl.classList.remove("on"); void flashEl.offsetWidth; flashEl.classList.add("on");
+        const shaken = document.querySelectorAll(".chat, .hero");
+        shaken.forEach((el) => { el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake"); });
+        setTimeout(() => shaken.forEach((el) => el.classList.remove("shake")), 520);
+      }
+    }
+    if (!running) { running = true; requestAnimationFrame(stepFx); }
+  }
+  function stepFx() {
+    ctx.clearRect(0, 0, fx.width, fx.height);
+    parts = parts.filter((p) => p.life > 0);
+    for (const p of parts) {
+      p.x += p.vx; p.y += p.vy; p.vy += p.g; p.vx *= 0.97; p.life--;
+      const t = p.life / p.max;
+      const s = p.shrink ? Math.max(4, snap(p.size * Math.min(1, t * 2))) : p.size;
+      ctx.globalAlpha = p.fade ? Math.max(0, Math.min(1, t * 1.6)) : 1;
+      ctx.fillStyle = p.color;
+      ctx.fillRect(snap(p.x), snap(p.y), s, s);
+    }
+    ctx.globalAlpha = 1;
+    if (parts.length) requestAnimationFrame(stepFx); else running = false;
+  }
+
+  // a textured meteor crashes in, then explodes where it lands
+  function strike(big) {
+    const x = rnd(window.innerWidth * 0.08, window.innerWidth * 0.92);
+    const y = window.innerHeight - rnd(40, 120);
+    const size = big ? 140 : 72, D = y + size + 40;
+    const img = document.createElement("img");
+    img.src = "meteor.svg"; img.alt = ""; img.className = "strike"; img.style.width = img.style.height = size + "px";
+    const tx = x - 0.29 * size, ty = y - 0.71 * size; // meteor head sits at ~29%,71% of the sprite
+    img.style.left = tx + "px"; img.style.top = ty + "px";
+    document.body.appendChild(img);
+    const anim = img.animate(
+      [{ transform: `translate(${D}px, ${-D}px)` }, { transform: "translate(0,0)" }],
+      { duration: big ? 1100 : 750, easing: "ease-in" }
+    );
+    anim.onfinish = () => { img.remove(); boom(x, y, big); };
+  }
+  if (!reduceMotion) {
+    const later = (fn, lo, hi) => setTimeout(() => { if (!document.hidden) fn(); later(fn, lo, hi); }, rnd(lo, hi));
+    later(() => strike(false), 6000, 11000);
+    later(() => strike(true), 35000, 55000);
+  }
+  // click empty sky/background = small boom; click the logo = BIG boom
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("button, input, .log, .menu, .composer, .clock")) return;
+    boom(e.clientX, e.clientY, !!e.target.closest(".logo"));
+  });
+
   // navy night sky -> sky blue day after 60 seconds
   setTimeout(() => document.body.classList.add("day"), 60000);
 
