@@ -77,7 +77,7 @@
     if (e.target.tagName === "BUTTON") { chips.hidden = true; ask(e.target.textContent); }
   });
 
-  // navy night sky -> beige after 60 seconds
+  // navy night sky -> sky blue day after 60 seconds
   setTimeout(() => document.body.classList.add("day"), 60000);
 
   add("Meteor incoming! ☄️ What are we digging into today?", "bot");
