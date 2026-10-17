@@ -1,12 +1,16 @@
-// GET /api/health -> tells you whether the n8n chat URL answers (does not send a chat message / use model credits).
+// GET /api/health          -> is the key configured and which model is used (free)
+// GET /api/health?live=1   -> also sends one tiny request to Claude (a few tokens) to prove the key works
+const mod = require("@anthropic-ai/sdk");
+const Anthropic = mod.default || mod;
+const { MODEL, hasKey } = require("../lib/agent");
 module.exports = async (req, res) => {
-  const url = process.env.N8N_CHAT_URL || "https://reyanshmandaloju.app.n8n.cloud/webhook/87c5a8d1-a70a-4dc7-82f6-9e87391fedcd/chat";
   res.setHeader("Content-Type", "application/json");
-  try {
-    const r = await fetch(url, { method: "OPTIONS" });
-    res.end(JSON.stringify({ reachable: true, status: r.status, hint: r.status === 404 ? "n8n says no such webhook: workflow inactive or URL changed" : "n8n host is up" }));
-  } catch (e) {
-    res.statusCode = 502;
-    res.end(JSON.stringify({ reachable: false, detail: String(e && e.message || e) }));
+  const out = { model: MODEL, keyConfigured: hasKey() };
+  if (hasKey() && /(^|&)live=1/.test(String(req.url).split("?")[1] || "")) {
+    try {
+      const r = await new Anthropic().messages.create({ model: MODEL, max_tokens: 64, output_config: { effort: "low" }, messages: [{ role: "user", content: "Reply with: OK" }] });
+      out.live = "ok"; out.stopReason = r.stop_reason;
+    } catch (e) { res.statusCode = 502; out.live = "failed"; out.error = String((e && e.message) || e).slice(0, 200); }
   }
+  res.end(JSON.stringify(out));
 };

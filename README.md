@@ -1,18 +1,19 @@
 # Mine Meteor
 
-Minecraft-style website for the Mine Meteor n8n agent (`n8n/mine-meteor.json`).
+Minecraft-style website + a Claude-powered Minecraft knowledge agent (no n8n needed).
 
-The browser only talks to `/api/chat` on this server; `server.js` forwards to your n8n
-Chat Trigger, so the n8n URL is never exposed. No dependencies (Node 18+).
+## How it works
+- `public/` – the website (chat, menu, history, pixel scenery).
+- `api/chat.js` – Vercel serverless function. Calls Claude through the official Anthropic SDK (`lib/agent.js`) and lets it
+  look things up on **minecraft.wiki** and the **Minecraft Fandom wiki** (`lib/wiki.js`). Answers stream to the page.
+- `lib/prompt.js` – the agent's personality/instructions (`agent/*.md` document the same text).
+- `api/health.js` – `/api/health` shows whether the key is set; `/api/health?live=1` sends one tiny test request to Claude.
+- `n8n/mine-meteor.json` – the old n8n workflow, kept for reference.
 
-## Run
-    N8N_CHAT_URL="https://<your-n8n-host>/webhook/87c5a8d1-a70a-4dc7-82f6-9e87391fedcd/chat" node server.js
-    # open http://localhost:3000
+## Setup (Vercel)
+1. Get an API key at <https://console.anthropic.com> (needs API credits - this is separate from a claude.ai subscription).
+2. Vercel project → **Settings → Environment Variables** → add `ANTHROPIC_API_KEY` (Production). Redeploy.
+3. Optional: `CLAUDE_MODEL` (default `claude-opus-5-5`; e.g. `claude-haiku-5-5` is far cheaper), `CLAUDE_FALLBACKS=off`.
 
-Use the **production** chat URL (workflow must be Active — it is). Deploy to any Node host
-(Render, Railway, Fly.io, a VPS) and set `N8N_CHAT_URL` as an environment variable.
-
-Agent prompt files live in `agent/` (they mirror the system message in the n8n workflow).
-
-## Free hosting on Vercel
-Import the repo at vercel.com, set env var `N8N_CHAT_URL`, deploy. `public/` is served as the site and `api/chat.js` is the proxy.
+## Run locally
+    ANTHROPIC_API_KEY=sk-ant-... node server.js     # http://localhost:3000   (Node 20+, run `npm install` once)

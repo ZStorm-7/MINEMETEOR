@@ -1,0 +1,15 @@
+{
+  "name": "mine-meteor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mine Meteor - a Minecraft knowledge agent (website + Claude-powered chat backend)",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.135.0"
+  }
+}

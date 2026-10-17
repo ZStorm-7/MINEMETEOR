@@ -134,15 +134,15 @@
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, sessionId: c.id }),
+        body: JSON.stringify({ message, history: c.msgs.slice(-21, -1).map((m) => ({ role: m.r === "user" ? "user" : "assistant", text: m.t })) }),
       });
       if (!res.ok) {
         let detail = "";
         try { const raw = await res.text(); try { const j = JSON.parse(raw); detail = j.message || j.error || j.detail || raw; } catch { detail = raw; } } catch {}
         detail = String(detail).replace(/\s+/g, " ").slice(0, 160);
         const hint = res.status === 429 ? "too many messages, slow down"
-          : res.status === 404 ? "n8n can't find that chat URL — is the workflow Active and the URL unchanged?"
-          : res.status >= 500 ? "the n8n agent crashed — check its Executions tab (model credits / credentials?)"
+          : res.status === 404 ? "the chat endpoint wasn't found — is the site fully deployed?"
+          : res.status >= 500 ? "the chat server hit a problem (is ANTHROPIC_API_KEY set in Vercel?)"
           : "";
         throw new Error("HTTP " + res.status + (hint ? " — " + hint : "") + (detail && res.status !== 429 ? " [" + detail + "]" : ""));
       }
@@ -153,10 +153,10 @@
         if (!line.trim()) return;
         try {
           const j = JSON.parse(line);
-          if (j.type === "error") throw new Error("n8n reported an error: " + String(j.content || j.message || "unknown").slice(0, 160));
+          if (j.type === "error") throw new Error("The agent hit a problem: " + String(j.content || j.message || "unknown").slice(0, 160));
           if (j.type === "item" && typeof j.content === "string") text += j.content;
           else if (j.output) text += j.output; // non-streaming fallback
-        } catch (err) { if (String(err.message).startsWith("n8n reported")) throw err; text += line; }
+        } catch (err) { if (String(err.message).startsWith("The agent hit")) throw err; text += line; }
         if (!raf) raf = requestAnimationFrame(paint);
       };
       for (;;) {
