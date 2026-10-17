@@ -156,7 +156,7 @@
         detail = String(detail).replace(/\s+/g, " ").slice(0, 160);
         const hint = res.status === 429 ? "too many messages, slow down"
           : res.status === 404 ? "the chat endpoint wasn't found — is the site fully deployed?"
-          : res.status >= 500 ? "the chat server hit a problem (is ANTHROPIC_API_KEY set in Vercel?)"
+          : res.status >= 500 ? "the chat server hit a problem (is GEMINI_API_KEY or ANTHROPIC_API_KEY set in Vercel, and did you redeploy?)"
           : "";
         throw new Error("HTTP " + res.status + (hint ? " — " + hint : "") + (detail && res.status !== 429 ? " [" + detail + "]" : ""));
       }
