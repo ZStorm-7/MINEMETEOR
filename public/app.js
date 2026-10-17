@@ -59,6 +59,20 @@
       "What are the best crops for fast hunger recovery and trading with villagers?",
       "How do I set up a sugar cane, bamboo, or kelp auto-farm?"
     ],
+    "🏝 SMPs & Servers": [
+      "What is Lifesteal SMP, how do hearts work, and what are the main rules?",
+      "Explain the Unstable SMP: what is it, who is in it, and what makes it different?",
+      "What are the most popular Minecraft SMPs right now and what is each one known for?",
+      "How does the Lifesteal plugin work and which versions or servers support it?",
+      "What are the big Hypixel game modes and which one should a beginner start with?"
+    ],
+    "📦 Mods & Packs": [
+      "What are the best performance mods for Fabric (Sodium and friends) and how do they work together?",
+      "What are the best resource packs for PvP, with the lowest fps impact?",
+      "Which shaders run well on a mid-range PC, and how do I install them?",
+      "What are the best tech and magic modpacks right now, and what does each focus on?",
+      "How do I install mods safely: Fabric vs Forge vs NeoForge, and where do I download them?"
+    ],
     "⌨ Commands & Versions": [
       "List the most useful cheat commands with examples (/give, /tp, /fill, /gamemode, /gamerule).",
       "What are the key differences between Java and Bedrock editions?",
