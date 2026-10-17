@@ -56,14 +56,20 @@ async function chat(req, res) {
     }
     res.end();
   } catch (e) {
-    if (!res.headersSent) res.writeHead(502);
-    res.end("upstream error");
+    if (!res.headersSent) res.writeHead(502, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "could not reach n8n", detail: String((e && e.message) || e) }));
   }
 }
 
 http.createServer((req, res) => {
   const url = new URL(req.url, "http://x");
   if (req.method === "POST" && url.pathname === "/api/chat") return chat(req, res);
+  if (req.method === "GET" && url.pathname === "/api/health") {
+    fetch(N8N_CHAT_URL, { method: "OPTIONS" })
+      .then((r) => { res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify({ reachable: true, status: r.status })); })
+      .catch((e) => { res.writeHead(502, { "Content-Type": "application/json" }); res.end(JSON.stringify({ reachable: false, detail: String((e && e.message) || e) })); });
+    return;
+  }
   if (req.method !== "GET") { res.writeHead(405); return res.end(); }
   const rel = url.pathname === "/" ? "/index.html" : decodeURIComponent(url.pathname);
   const file = path.normalize(path.join(PUBLIC, rel));

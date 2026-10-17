@@ -85,8 +85,6 @@ for r in range(HB):
             for x in range(B):
                 px[(r*B+y)*W + c*B + x] = t[y][x]
 png('public/underground.png', W, H, px)
-import json
-json.dump({'cols': WB, 'rows': HB, 'blocks': types}, open('public/underground.json', 'w'), separators=(',', ':'))   # block map for the page (mineable ores)
 
 # seamless lava tile
 LV = 16

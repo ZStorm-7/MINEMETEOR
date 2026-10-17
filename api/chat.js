@@ -24,8 +24,8 @@ module.exports = async (req, res) => {
       res.write(value);
     }
     res.end();
-  } catch {
-    if (!res.headersSent) res.statusCode = 502;
-    res.end("upstream error");
+  } catch (e) {
+    if (!res.headersSent) { res.statusCode = 502; res.setHeader("Content-Type", "application/json"); }
+    res.end(JSON.stringify({ error: "could not reach n8n", detail: String(e && e.message || e) }));
   }
 };
