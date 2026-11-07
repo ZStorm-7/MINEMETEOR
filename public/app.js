@@ -148,7 +148,7 @@
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, history: c.msgs.slice(-21, -1).map((m) => ({ role: m.r === "user" ? "user" : "assistant", text: m.t })) }),
+        body: JSON.stringify({ message, sessionId: c.id, history: c.msgs.slice(-21, -1).map((m) => ({ role: m.r === "user" ? "user" : "assistant", text: m.t })) }),
       });
       if (!res.ok) {
         let detail = "";
@@ -156,7 +156,7 @@
         detail = String(detail).replace(/\s+/g, " ").slice(0, 160);
         const hint = res.status === 429 ? "too many messages, slow down"
           : res.status === 404 ? "the chat endpoint wasn't found — is the site fully deployed?"
-          : res.status >= 500 ? "the chat server hit a problem (is GEMINI_API_KEY or ANTHROPIC_API_KEY set in Vercel, and did you redeploy?)"
+          : res.status >= 500 ? "the chat server hit a problem (is N8N_WEBHOOK_URL (or an AI key) set in Vercel, and did you redeploy?)"
           : "";
         throw new Error("HTTP " + res.status + (hint ? " — " + hint : "") + (detail && res.status !== 429 ? " [" + detail + "]" : ""));
       }
