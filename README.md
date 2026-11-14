@@ -1,26 +1,53 @@
-# Mine Meteor
+# FindCraft
 
-Minecraft-style website + a Claude-powered Minecraft knowledge agent (no n8n needed).
+A Minecraft knowledge agent + Minecraft-style website. No n8n: the agent runs inside this repo and works with
+**any** AI provider, including a fully free self-hosted one.
 
-## How it works
-- `public/` – the website (chat, menu, history, pixel scenery).
-- `api/chat.js` – Vercel serverless function. Calls Claude through the official Anthropic SDK (`lib/agent.js`) and lets it
-  look things up (`lib/wiki.js`): **any Minecraft wiki** (minecraft.wiki, Fandom, wiki.gg, Miraheze - e.g. Lifesteal), **Modrinth** (mods, resource packs, shaders, modpacks) and, via Anthropic's hosted tools, **live web search + page fetch** (SMPs like Unstable SMP, servers, creators, news). Answers stream to the page.
-- `lib/prompt.js` – the agent's personality/instructions (`agent/*.md` document the same text).
-- `api/health.js` – `/api/health` shows whether the key is set; `/api/health?live=1` sends one tiny test request to Claude.
-- `n8n/mine-meteor.json` – the old n8n workflow, kept for reference.
+## What it can look up
+- **Any Minecraft wiki** - minecraft.wiki, Fandom, wiki.gg, Miraheze (e.g. Lifesteal)
+- **Modrinth** - mods, resource packs, shaders, modpacks, datapacks
+- **Mojang version data** - latest release/snapshot, release dates
+- **Live server status** - is mc.hypixel.net online, players, version
+- **Live web search** (Claude only) - SMP lore, creators, news
+- **Whatever you teach it** - put `.md` files in [`knowledge/`](knowledge/README.md)
 
-## Setup (Vercel) - FREE option first
-**Free:** get a key at <https://aistudio.google.com/apikey> (Google account, free tier), then in Vercel add `GEMINI_API_KEY`
-(Production) and redeploy. The site picks the newest free Gemini *Flash* model automatically (`GEMINI_MODEL` overrides).
-Free mode has the wiki + Modrinth tools but no hosted web search. If both keys exist Claude wins; `AI_PROVIDER=gemini|claude` forces one.
+## 1. Pick an AI (one is enough)
+| Option | Cost | Setup |
+|---|---|---|
+| **Ollama** (self-hosted) | free | `LLM_BASE_URL=http://ollama:11434/v1`, `LLM_MODEL=llama3.1` |
+| **Gemini** free tier | free | `GEMINI_API_KEY` from <https://aistudio.google.com/apikey> |
+| **Groq / OpenRouter / any OpenAI-style API** | free tiers | `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` |
+| **Claude** | paid, best quality | `ANTHROPIC_API_KEY` from <https://console.anthropic.com> (`CLAUDE_MODEL=claude-haiku-5-5` is cheaper) |
 
-**Paid (Claude):** see below.
+Priority if several are set: Claude > OpenAI-compatible > Gemini. `AI_PROVIDER=claude|openai|gemini` forces one.
+Small local models call tools less reliably than Claude/Gemini - use a tool-capable model (llama3.1+, qwen2.5+).
 
-## Setup (Vercel) - Claude
-1. Get an API key at <https://console.anthropic.com> (needs API credits - this is separate from a claude.ai subscription).
-2. Vercel project → **Settings → Environment Variables** → add `ANTHROPIC_API_KEY` (Production). Redeploy.
-3. Optional: `CLAUDE_WEB=off` (disable web search), `CLAUDE_MODEL` (default `claude-opus-5-5`; e.g. `claude-haiku-5-5` is far cheaper), `CLAUDE_FALLBACKS=off`.
+## 2. Self-host with Docker (recommended)
+```bash
+cp .env.example .env          # edit: choose your provider
+docker compose up -d --build  # http://localhost:3000
+```
+With Ollama included (free, runs on your own machine/VPS):
+```bash
+docker compose --profile ollama up -d --build
+docker compose exec ollama ollama pull llama3.1
+```
+Check it: `http://localhost:3000/api/health?live=1` should say `"live":"ok"`.
+To put it on the internet, run it on a VPS and put a reverse proxy (Caddy/nginx) with HTTPS in front of port 3000.
 
-## Run locally
-    ANTHROPIC_API_KEY=sk-ant-... node server.js     # http://localhost:3000   (Node 20+, run `npm install` once)
+## Without Docker
+```bash
+npm install
+cp .env.example .env   # then export the variables, e.g.:  GEMINI_API_KEY=... node server.js
+node server.js         # http://localhost:3000  (Node 20+)
+```
+
+## Vercel
+Add the env vars (Settings -> Environment Variables), redeploy. `vercel.json` already bundles `knowledge/`.
+
+## Teaching it more
+Edit/add files in `knowledge/` (see its README). Personality lives in `lib/prompt.js` (documented in `agent/*.md`).
+New lookup tools go in `lib/wiki.js` (one declaration + one function) and work for every provider.
+
+## Layout
+`public/` website | `api/` Vercel functions | `lib/agent.js` provider switch | `lib/{gemini,openai}.js` providers | `lib/wiki.js` tools | `n8n/` the old workflow, kept for reference

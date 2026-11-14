@@ -1,0 +1,21 @@
+# Self-host FindCraft:
+#   cp .env.example .env   (pick a provider)
+#   docker compose up -d --build                     -> http://localhost:3000
+#   docker compose --profile ollama up -d --build    -> same + a free local AI (Ollama); then: docker compose exec ollama ollama pull llama3.1
+services:
+  findcraft:
+    build: .
+    ports: ["${PORT:-3000}:3000"]
+    env_file: [.env]
+    volumes:
+      - ./knowledge:/app/knowledge:ro     # edit these files to teach FindCraft; no rebuild needed
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama
+    profiles: ["ollama"]
+    volumes: [ollama:/root/.ollama]
+    restart: unless-stopped
+
+volumes:
+  ollama:

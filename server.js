@@ -36,4 +36,4 @@ http.createServer(async (req, res) => {
     res.writeHead(200, { "Content-Type": TYPES[path.extname(file)] || "application/octet-stream" });
     res.end(buf);
   });
-}).listen(PORT, () => console.log(`Mine Meteor on http://localhost:${PORT}`));
+}).listen(PORT, () => console.log(`FindCraft on http://localhost:${PORT}`));
