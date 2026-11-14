@@ -62,7 +62,7 @@ body.day .cloud{opacity:.95}
 /* Minecraft chat lines */
 .msg{max-width:100%;padding:4px 8px;white-space:pre-wrap;word-wrap:break-word;font-size:26px;background:#0000008c;text-shadow:2px 2px 0 #3f3f3f}
 .msg.user::before{content:"<You> ";color:#7fe0ff}
-.msg.bot::before{content:"<FindCraft> ";color:#ffb347}
+.msg.bot::before{content:"<FINDCRAFT> ";color:#ffb347}
 .msg.err{color:#ff7a85}
 
 /* Minecraft buttons */

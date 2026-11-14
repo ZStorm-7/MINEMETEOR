@@ -1,4 +1,4 @@
-# Teach FindCraft
+# Teach FINDCRAFT
 
 Every `.md` or `.txt` file in this folder (except this README) is added to FindCraft's brain on every question.
 No code, no restart needed - just save the file.

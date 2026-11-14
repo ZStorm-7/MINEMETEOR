@@ -1,4 +1,4 @@
-# FindCraft
+# FINDCRAFT
 
 A Minecraft knowledge agent + Minecraft-style website. No n8n: the agent runs inside this repo and works with
 **any** AI provider, including a fully free self-hosted one.
@@ -16,21 +16,22 @@ Tested with FindCraft's real tools (crafting, versions, server status, mods):
 
 | Option | Signup | Result in testing |
 |---|---|---|
-| **Pollinations** (`LLM_BASE_URL=https://text.pollinations.ai/openai`, `LLM_MODEL=openai`) | **none** | Works. Uses the tools; mostly right with `FINDCRAFT_STYLE=plain`; 7-90 s per answer; sometimes wrong on details. Public free service: no uptime promise, questions go to a third party. |
+| **Pollinations** - **built in, the default**; nothing to configure | **none** | Works. Uses the tools; mostly right with `FINDCRAFT_STYLE=plain`; 7-90 s per answer; sometimes wrong on details. Public free service: no uptime promise, questions go to a third party. |
 | **Groq** free tier (`https://api.groq.com/openai/v1`, `openai/gpt-oss-120b`) | 1 min, no card | Not tested yet (needs a key). Much bigger model, very fast. |
 | **OpenRouter** `:free` models | 1 min, no card | Not tested yet. Free models have daily limits. |
 | **Ollama** on a CPU-only machine (qwen2.5 3B / 7B) | none | Runs, but **not usable**: skipped the tools and made up recipes. Needs a GPU and a 14B+ model. |
 | **Gemini** free tier (`GEMINI_API_KEY`) | Google account | Built in. |
 | **Claude** (`ANTHROPIC_API_KEY`) | paid | Best quality, plus live web search. |
 
-Priority if several are set: Claude > OpenAI-compatible > Gemini. `AI_PROVIDER=claude|openai|gemini` forces one.
-`FINDCRAFT_STYLE=plain` = fewer emojis, up to ~6 lines; strongly recommended for free/small models.
+Priority if several are set: Claude > your `LLM_BASE_URL` > Gemini > Pollinations (built-in fallback). `AI_PROVIDER=claude|openai|gemini` forces one.
+`FINDCRAFT_STYLE=plain|emoji` = calmer (up to ~6 lines, default for Pollinations/OpenAI-style models) or the original emoji-heavy style.
+Free models are also forced to check the wiki before answering (`LLM_FORCE_LOOKUP=off` disables this); if one skips it, the server does the search for it.
 `LOG_TOOLS=1` prints each lookup the model makes, so you can see whether it really checks the wiki.
 
 ## 2. Self-host with Docker (recommended)
 ```bash
-cp .env.example .env          # edit: choose your provider
-docker compose up -d --build  # http://localhost:3000
+docker compose up -d --build  # http://localhost:3000 - works with no .env at all (uses free Pollinations)
+# optional: cp .env.example .env and pick another AI
 ```
 With Ollama included (only worth it with a GPU, see the table):
 ```bash
