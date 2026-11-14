@@ -17,7 +17,7 @@ Tested with FindCraft's real tools (crafting, versions, server status, mods):
 | Option | Signup | Result in testing |
 |---|---|---|
 | **Pollinations** - **built in, the default**; nothing to configure | **none** | Works. Uses the tools; mostly right with `FINDCRAFT_STYLE=plain`; 7-90 s per answer; sometimes wrong on details. Public free service: no uptime promise, questions go to a third party. |
-| **Groq** free tier: just set `GROQ_API_KEY` | 1 min, no card | Not tested yet (needs your key). Much bigger model, very fast. |
+| **Groq** free tier: just set `GROQ_API_KEY` | 1 min, no card | Tested: **best free option.** 2-3 s per answer, called the right tool every time, all of crafting/versions/server/mod questions correct. Limit: 8,000 tokens/min (about 2-4 questions/min) and 1,000 requests/day; over the limit it waits and retries (slower) instead of failing. |
 | **OpenRouter** `:free` models | 1 min, no card | Not tested yet. Free models have daily limits. |
 | **Ollama** on a CPU-only machine (qwen2.5 3B / 7B) | none | Runs, but **not usable**: skipped the tools and made up recipes. Needs a GPU and a 14B+ model. |
 | **Gemini** free tier (`GEMINI_API_KEY`) | Google account | Tested: works, answers in 1-4 s using `gemini-2.5-flash` and the wiki tools. **Free quota is small**: it ran out after about 5 questions in a minute (each question = 2+ calls), and daily limits apply. Fine for a few friends, too small for a busy public site. |
