@@ -2,7 +2,7 @@
   "name": "findcraft",
   "version": "1.0.0",
   "private": true,
-  "description": "FINDCRAFT - a Minecraft knowledge agent (website + Claude-powered chat backend)",
+  "description": "FINDCRAFTER - a Minecraft knowledge agent (website + Claude-powered chat backend)",
   "scripts": {
     "start": "node server.js"
   },
