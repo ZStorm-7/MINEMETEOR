@@ -20,7 +20,7 @@ Tested with FindCraft's real tools (crafting, versions, server status, mods):
 | **Groq** free tier: just set `GROQ_API_KEY` | 1 min, no card | Not tested yet (needs your key). Much bigger model, very fast. |
 | **OpenRouter** `:free` models | 1 min, no card | Not tested yet. Free models have daily limits. |
 | **Ollama** on a CPU-only machine (qwen2.5 3B / 7B) | none | Runs, but **not usable**: skipped the tools and made up recipes. Needs a GPU and a 14B+ model. |
-| **Gemini** free tier (`GEMINI_API_KEY`) | Google account | Built in. |
+| **Gemini** free tier (`GEMINI_API_KEY`) | Google account | Tested: works, answers in 1-4 s using `gemini-2.5-flash` and the wiki tools. **Free quota is small**: it ran out after about 5 questions in a minute (each question = 2+ calls), and daily limits apply. Fine for a few friends, too small for a busy public site. |
 | **Claude** (`ANTHROPIC_API_KEY`) | paid | Best quality, plus live web search. |
 
 Priority if several are set: Claude > `GROQ_API_KEY` / `LLM_BASE_URL` > Gemini > Pollinations (built-in fallback). `AI_PROVIDER=claude|openai|gemini` forces one.
