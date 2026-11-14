@@ -4,12 +4,14 @@ const mod = require("@anthropic-ai/sdk");
 const Anthropic = mod.default || mod;
 const { MODEL, hasKey, provider } = require("../lib/agent");
 const gemini = require("../lib/gemini");
+const openai = require("../lib/openai");
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json");
   const p = provider();
   const out = { provider: p, keyConfigured: hasKey() };
   if (p === "claude") out.model = MODEL;
   if (p === "gemini") out.model = await gemini.pickModel();
+  if (p === "openai") out.model = openai.model();
   if (hasKey() && /(^|&)live=1/.test(String(req.url).split("?")[1] || "")) {
     try {
       if (p === "claude") {
@@ -17,7 +19,7 @@ module.exports = async (req, res) => {
         out.stopReason = r.stop_reason;
       } else {
         let text = "";
-        await gemini.runGemini({ history: [], message: "Reply with just: OK", emit: (t) => (text += t) });
+        await (p === "openai" ? openai.runOpenAI : gemini.runGemini)({ history: [], message: "Reply with just: OK", emit: (t) => (text += t) });
         out.reply = text.slice(0, 40);
       }
       out.live = "ok";

@@ -1,0 +1,23 @@
+# Self-host FindCrafter:
+#   (optional) cp .env.example .env   - without it FINDCRAFTER uses the free built-in Pollinations AI
+#   docker compose up -d --build                     -> http://localhost:3000
+#   docker compose --profile ollama up -d --build    -> same + a free local AI (Ollama); then: docker compose exec ollama ollama pull qwen2.5:14b  (needs a GPU)
+services:
+  findcraft:
+    build: .
+    ports: ["${PORT:-3000}:3000"]
+    env_file:
+      - path: .env
+        required: false          # no .env = built-in free Pollinations AI
+    volumes:
+      - ./knowledge:/app/knowledge:ro     # edit these files to teach FindCrafter; no rebuild needed
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama
+    profiles: ["ollama"]
+    volumes: [ollama:/root/.ollama]
+    restart: unless-stopped
+
+volumes:
+  ollama:
