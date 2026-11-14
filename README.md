@@ -12,25 +12,30 @@ A Minecraft knowledge agent + Minecraft-style website. No n8n: the agent runs in
 - **Whatever you teach it** - put `.md` files in [`knowledge/`](knowledge/README.md)
 
 ## 1. Pick an AI (one is enough)
-| Option | Cost | Setup |
+Tested with FindCraft's real tools (crafting, versions, server status, mods):
+
+| Option | Signup | Result in testing |
 |---|---|---|
-| **Ollama** (self-hosted) | free | `LLM_BASE_URL=http://ollama:11434/v1`, `LLM_MODEL=llama3.1` |
-| **Gemini** free tier | free | `GEMINI_API_KEY` from <https://aistudio.google.com/apikey> |
-| **Groq / OpenRouter / any OpenAI-style API** | free tiers | `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` |
-| **Claude** | paid, best quality | `ANTHROPIC_API_KEY` from <https://console.anthropic.com> (`CLAUDE_MODEL=claude-haiku-5-5` is cheaper) |
+| **Pollinations** (`LLM_BASE_URL=https://text.pollinations.ai/openai`, `LLM_MODEL=openai`) | **none** | Works. Uses the tools; mostly right with `FINDCRAFT_STYLE=plain`; 7-90 s per answer; sometimes wrong on details. Public free service: no uptime promise, questions go to a third party. |
+| **Groq** free tier (`https://api.groq.com/openai/v1`, `openai/gpt-oss-120b`) | 1 min, no card | Not tested yet (needs a key). Much bigger model, very fast. |
+| **OpenRouter** `:free` models | 1 min, no card | Not tested yet. Free models have daily limits. |
+| **Ollama** on a CPU-only machine (qwen2.5 3B / 7B) | none | Runs, but **not usable**: skipped the tools and made up recipes. Needs a GPU and a 14B+ model. |
+| **Gemini** free tier (`GEMINI_API_KEY`) | Google account | Built in. |
+| **Claude** (`ANTHROPIC_API_KEY`) | paid | Best quality, plus live web search. |
 
 Priority if several are set: Claude > OpenAI-compatible > Gemini. `AI_PROVIDER=claude|openai|gemini` forces one.
-Small local models call tools less reliably than Claude/Gemini - use a tool-capable model (llama3.1+, qwen2.5+).
+`FINDCRAFT_STYLE=plain` = fewer emojis, up to ~6 lines; strongly recommended for free/small models.
+`LOG_TOOLS=1` prints each lookup the model makes, so you can see whether it really checks the wiki.
 
 ## 2. Self-host with Docker (recommended)
 ```bash
 cp .env.example .env          # edit: choose your provider
 docker compose up -d --build  # http://localhost:3000
 ```
-With Ollama included (free, runs on your own machine/VPS):
+With Ollama included (only worth it with a GPU, see the table):
 ```bash
 docker compose --profile ollama up -d --build
-docker compose exec ollama ollama pull llama3.1
+docker compose exec ollama ollama pull qwen2.5:14b
 ```
 Check it: `http://localhost:3000/api/health?live=1` should say `"live":"ok"`.
 To put it on the internet, run it on a VPS and put a reverse proxy (Caddy/nginx) with HTTPS in front of port 3000.
