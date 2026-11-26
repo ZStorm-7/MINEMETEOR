@@ -1,29 +1,15 @@
-// GET /api/health          -> which AI provider/key is configured (free)
-// GET /api/health?live=1   -> also sends one tiny test request to that provider to prove the key works
-const mod = require("@anthropic-ai/sdk");
-const Anthropic = mod.default || mod;
-const { MODEL, hasKey, provider, configured } = require("../lib/agent");
-const gemini = require("../lib/gemini");
-const openai = require("../lib/openai");
+// GET /api/health          -> which AIs are configured (counts only, never keys), their order and whether any is resting, what is taught
+// GET /api/health?live=1   -> also sends one tiny test question to EACH configured AI separately and reports ok / why not
+const { hasKey, configured, chain, probe } = require("../lib/agent");
+const knowledge = require("../lib/knowledge");
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json");
-  const p = provider();
-  const out = { provider: p, keyConfigured: hasKey(), keysFound: configured() };   // true/false only: shows whether GROQ_API_KEY etc. reached the server
-  if (p === "claude") out.model = MODEL;
-  if (p === "gemini") out.model = await gemini.pickModel();
-  if (p === "openai") out.model = openai.model();
+  const list = chain();
+  const out = { ok: hasKey(), answeringWith: list[0] ? list[0].name : "none", chain: list, keysFound: configured(), taught: knowledge.count() };
   if (hasKey() && /(^|&)live=1/.test(String(req.url).split("?")[1] || "")) {
-    try {
-      if (p === "claude") {
-        const r = await new Anthropic().messages.create({ model: MODEL, max_tokens: 64, output_config: { effort: "low" }, messages: [{ role: "user", content: "Reply with: OK" }] });
-        out.stopReason = r.stop_reason;
-      } else {
-        let text = "";
-        await (p === "openai" ? openai.runOpenAI : gemini.runGemini)({ history: [], message: "Reply with just: OK", emit: (t) => (text += t) });
-        out.reply = text.slice(0, 40);
-      }
-      out.live = "ok";
-    } catch (e) { res.statusCode = 502; out.live = "failed"; out.error = String((e && e.message) || e).slice(0, 200); }
+    out.tests = await Promise.all(list.map((p) => probe(p.id)));
+    out.live = out.tests.some((t) => t.ok) ? "ok" : "failed";
+    if (out.live === "failed") res.statusCode = 502;
   }
   res.end(JSON.stringify(out));
 };
