@@ -1,4 +1,4 @@
-# FINDCRAFTER
+# FindCraft
 
 A Minecraft knowledge agent + Minecraft-style website. No n8n: the agent runs inside this repo and works with
 **any** AI provider, including a fully free self-hosted one.
@@ -12,7 +12,7 @@ A Minecraft knowledge agent + Minecraft-style website. No n8n: the agent runs in
 - **Whatever you teach it** - put `.md` files in [`knowledge/`](knowledge/README.md)
 
 ## 1. Pick an AI (one is enough)
-Tested with FindCrafter's real tools (crafting, versions, server status, mods):
+Tested with FindCraft's real tools (crafting, versions, server status, mods):
 
 | Option | Signup | Result in testing |
 |---|---|---|
