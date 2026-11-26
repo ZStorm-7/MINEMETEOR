@@ -4,7 +4,8 @@
   "private": true,
   "description": "FindCraft - a Minecraft knowledge agent (website + Claude-powered chat backend)",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "quiz": "node scripts/quiz.js"
   },
   "engines": {
     "node": ">=20"

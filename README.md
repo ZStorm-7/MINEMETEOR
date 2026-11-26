@@ -28,7 +28,20 @@ Priority if several are set: Claude > `GROQ_API_KEY` / `LLM_BASE_URL` > Gemini >
 Free models are also forced to check the wiki before answering (`LLM_FORCE_LOOKUP=off` disables this); if one skips it, the server does the search for it.
 `LOG_TOOLS=1` prints each lookup the model makes, so you can see whether it really checks the wiki.
 
-## 2. Self-host with Docker (recommended)
+## 2. Use several AIs together (automatic failover)
+You do not have to pick one. Add every key you have; FindCraft builds a chain and answers with the first healthy one:
+
+`Claude -> Groq -> custom server -> Gemini -> Pollinations (free, no key, last resort)`
+
+If an AI is rate-limited, out of credits, down or has a bad key, the next one answers instead - before the visitor sees anything - and the
+failed one rests for a while. When you add a fresh key, it simply joins the chain.
+- Several keys for one provider: `GROQ_API_KEY=key1,key2` (or `GROQ_API_KEY_2=key2`), same for `GEMINI_API_KEY`.
+- `AI_MODE=balance` alternates between healthy AIs to spread their free quotas; `AI_ORDER=gemini,groq,...` changes the order;
+  `AI_PROVIDER=groq` forces a single AI; `AI_POLLINATIONS=off` removes the keyless last resort.
+- `/api/health` shows the chain; `/api/health?live=1` tests EACH AI and says which one is out of credits (never shows keys).
+- `npm run quiz` asks every AI the same Minecraft questions and checks the answers.
+
+## 3. Self-host with Docker (recommended)
 ```bash
 docker compose up -d --build  # http://localhost:3000 - works with no .env at all (uses free Pollinations)
 # optional: cp .env.example .env and pick another AI
@@ -52,8 +65,10 @@ node server.js         # http://localhost:3000  (Node 20+)
 Add the env vars (Settings -> Environment Variables), redeploy. `vercel.json` already bundles `knowledge/`.
 
 ## Teaching it more
-Edit/add files in `knowledge/` (see its README). Personality lives in `lib/prompt.js` (documented in `agent/*.md`).
-New lookup tools go in `lib/wiki.js` (one declaration + one function) and work for every provider.
+The agent looks things up instead of guessing: `search_minecraft` queries the official wiki + the Fandom Minecraft wiki + your own notes in one
+call; `search_wiki`/`get_wiki_page` read any wiki (a verified list of community wikis is in `knowledge/core-wikis.md`); Modrinth, Mojang
+version data and live server status have their own tools. Your own lessons go in [`knowledge/`](knowledge/README.md) - plain files, shared by
+every AI, so a new API key never needs re-teaching. Personality lives in `lib/prompt.js` (documented in `agent/*.md`); new tools go in `lib/wiki.js`.
 
 ## Layout
-`public/` website | `api/` Vercel functions | `lib/agent.js` provider switch | `lib/{gemini,openai}.js` providers | `lib/wiki.js` tools | `n8n/` the old workflow, kept for reference
+`public/` website | `api/` Vercel functions | `lib/agent.js` AI chain/failover | `lib/{gemini,openai}.js` providers | `lib/wiki.js` tools | `n8n/` the old workflow, kept for reference
