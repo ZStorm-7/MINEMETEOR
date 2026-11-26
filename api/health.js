@@ -2,13 +2,13 @@
 // GET /api/health?live=1   -> also sends one tiny test request to that provider to prove the key works
 const mod = require("@anthropic-ai/sdk");
 const Anthropic = mod.default || mod;
-const { MODEL, hasKey, provider } = require("../lib/agent");
+const { MODEL, hasKey, provider, configured } = require("../lib/agent");
 const gemini = require("../lib/gemini");
 const openai = require("../lib/openai");
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json");
   const p = provider();
-  const out = { provider: p, keyConfigured: hasKey() };
+  const out = { provider: p, keyConfigured: hasKey(), keysFound: configured() };   // true/false only: shows whether GROQ_API_KEY etc. reached the server
   if (p === "claude") out.model = MODEL;
   if (p === "gemini") out.model = await gemini.pickModel();
   if (p === "openai") out.model = openai.model();
