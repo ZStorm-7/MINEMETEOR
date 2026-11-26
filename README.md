@@ -65,7 +65,7 @@ node server.js         # http://localhost:3000  (Node 20+)
 Add the env vars (Settings -> Environment Variables), redeploy. `vercel.json` already bundles `knowledge/`.
 
 ## Teaching it more
-The agent looks things up instead of guessing: `search_minecraft` queries the official wiki + the Fandom Minecraft wiki + your own notes in one
+The agent looks things up instead of guessing. For a real question the server does the lookup FIRST (wikis, Fandom, Mojang versions, server status, Modrinth, your notes) and then asks the AI once, so answers are faster and use about half the free-tier tokens (`LLM_PREFETCH=off` goes back to letting the AI call the tools itself). Tools: `search_minecraft` queries the official wiki + the Fandom Minecraft wiki + your own notes in one
 call; `search_wiki`/`get_wiki_page` read any wiki (a verified list of community wikis is in `knowledge/core-wikis.md`); Modrinth, Mojang
 version data and live server status have their own tools. Your own lessons go in [`knowledge/`](knowledge/README.md) - plain files, shared by
 every AI, so a new API key never needs re-teaching. Personality lives in `lib/prompt.js` (documented in `agent/*.md`); new tools go in `lib/wiki.js`.
