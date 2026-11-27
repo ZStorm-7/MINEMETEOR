@@ -82,7 +82,9 @@
     ]
   };
   const btn = form.querySelector("button.send");
-  const GREETING = "Meteor incoming! ☄️ What are we digging into today?";
+  const GREETING = "Hey miner! I'm FindCraft ⛏️ Ask me anything about Minecraft!";
+  const CHIPS = [["⚒ Craft an anvil", "How do I craft an anvil?"], ["💎 Find diamonds", "Where is the best place to find diamonds?"], ["🆕 Latest version", "What is the latest Minecraft version?"],
+    ["✨ What is Mending?", "What does the Mending enchantment do?"], ["👹 Beat the Warden", "How do I beat the Warden?"], ["🖥 Is Hypixel online?", "Is mc.hypixel.net online?"]];
 
   // ---------- chat history (localStorage) ----------
   const KEY = "mm-chats-v1";
@@ -125,25 +127,105 @@
     return d;
   }
 
+  // ---------- safe mini-markdown: **bold**, *italic*, `code`, lists, headings, code blocks (DOM nodes only, never innerHTML) ----------
+  function inline(parent, s) {
+    const re = /(\*\*[^*\n]+\*\*|`[^`\n]+`|\*[^*\s\n][^*\n]*\*)/g;
+    let i = 0, m;
+    while ((m = re.exec(s))) {
+      if (m.index > i) parent.append(s.slice(i, m.index));
+      const t = m[0], el = document.createElement(t.startsWith("**") ? "strong" : t[0] === "`" ? "code" : "em");
+      el.textContent = t.startsWith("**") ? t.slice(2, -2) : t.slice(1, -1);
+      parent.append(el); i = m.index + t.length;
+    }
+    if (i < s.length) parent.append(s.slice(i));
+  }
+  function rich(el, text) {
+    el.textContent = "";
+    el.classList.add("rich");
+    let list = null, para = null, fence = null;
+    for (const raw of String(text).replace(/\r/g, "").split("\n")) {
+      if (fence) { if (/^\s*```/.test(raw)) fence = null; else fence.textContent += (fence.textContent ? "\n" : "") + raw; continue; }
+      if (/^\s*```/.test(raw)) { list = para = null; const pre = document.createElement("pre"), code = document.createElement("code"); pre.append(code); el.append(pre); fence = code; continue; }
+      const line = raw.trimEnd();
+      if (!line.trim()) { list = para = null; continue; }
+      let m;
+      if ((m = line.match(/^\s*#{1,4}\s+(.*)$/))) { list = para = null; const h = document.createElement("h4"); inline(h, m[1]); el.append(h); continue; }
+      if ((m = line.match(/^\s*([-*•]|\d+[.)])\s+(.*)$/))) {
+        const ordered = /\d/.test(m[1]);
+        if (!list || list.tagName !== (ordered ? "OL" : "UL")) { para = null; list = document.createElement(ordered ? "ol" : "ul"); el.append(list); }
+        const li = document.createElement("li"); inline(li, m[2]); list.append(li); continue;
+      }
+      list = null;
+      if (!para) { para = document.createElement("p"); el.append(para); } else para.append(document.createElement("br"));
+      inline(para, line.trim());
+    }
+  }
+  function addCopy(el, text) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "copy-btn"; b.textContent = "COPY"; b.title = "Copy this answer";
+    b.addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText(text); } catch { const t = document.createElement("textarea"); t.value = text; document.body.appendChild(t); t.select(); try { document.execCommand("copy"); } catch {} t.remove(); }
+      b.textContent = "COPIED!"; setTimeout(() => (b.textContent = "COPY"), 1300);
+    });
+    el.appendChild(b);
+  }
+  // "mining for the answer": swinging pickaxe + rotating status text; returns a function that stops it
+  const STATUS = ["Searching the Minecraft wikis", "Reading the wiki pages", "Mining for the answer", "Crafting your reply"];
+  function startTyping(bot) {
+    bot.classList.add("typing-wrap");
+    const w = document.createElement("div"); w.className = "typing";
+    const pick = document.createElement("span"); pick.className = "pick-swing"; pick.textContent = "⛏️";
+    const label = document.createElement("span"); label.textContent = STATUS[0];
+    const dots = document.createElement("span"); dots.className = "dots"; dots.innerHTML = "<span>.</span><span>.</span><span>.</span>";   // static markup, no user text
+    const text = document.createElement("span"); text.append(label, dots);   // dots stay glued to the end of the text
+    w.append(pick, text); bot.appendChild(w);
+    let i = 0; const t = setInterval(() => { i = (i + 1) % STATUS.length; label.textContent = STATUS[i]; }, 2400);
+    return () => { clearInterval(t); bot.classList.remove("typing-wrap"); };
+  }
+  function showChips() {
+    const w = document.createElement("div"); w.className = "chips";
+    CHIPS.forEach(([label, q]) => {
+      const b = document.createElement("button"); b.type = "button"; b.textContent = label;
+      b.addEventListener("click", () => { closePanels(); ask(q); });
+      w.appendChild(b);
+    });
+    log.appendChild(w);
+  }
+  function friendly(raw) {
+    if (/every AI is busy|out of free credits|limit/i.test(raw)) return "All the AIs are resting for a moment (free limits). Give it a minute, then hit Retry ⏳";
+    if (/429|slow down/i.test(raw)) return "Slow down, miner! Too many questions at once - try again in a few seconds.";
+    return "A creeper blew up the connection. Hit Retry!";
+  }
+
   function render() {
     log.textContent = "";
     add(GREETING, "bot");
-    chat.msgs.forEach((m) => add(m.t, m.r === "user" ? "user" : "bot", m.ts));
+    if (!chat.msgs.length) showChips();
+    chat.msgs.forEach((m) => {
+      if (m.r === "user") return add(m.t, "user", m.ts);
+      const el = add("", "bot", m.ts); rich(el, m.t); addCopy(el, m.t);
+    });
     pinned = true; follow();
+    if (!chat.msgs.length) log.scrollTop = 0;   // fresh chat: show the greeting from its first line, with the quick buttons below
   }
 
-  // ---------- talking to n8n (streamed newline-delimited JSON) ----------
-  async function ask(message) {
+  // ---------- talking to the chat API (streamed newline-delimited JSON) ----------
+  async function ask(message, retryEl) {
     const c = chat; // keep writing to this chat even if the reader switches away mid-answer
     const sent = Date.now();
-    c.msgs.push({ r: "user", t: message, ts: sent });
-    if (c.title === "New chat") c.title = message.slice(0, 40);
-    c.ts = sent; save();
-    add(message, "user", sent);
-    const bot = add("Mining for an answer… ⛏️", "bot", sent);
+    log.querySelectorAll(".chips").forEach((n) => n.remove());
+    if (retryEl) retryEl.remove();   // retry: the question is already in the chat, only replace the failed answer
+    else {
+      c.msgs.push({ r: "user", t: message, ts: sent });
+      if (c.title === "New chat") c.title = message.slice(0, 40);
+      c.ts = sent; save();
+      add(message, "user", sent);
+    }
+    const bot = add("", "bot", sent);
+    const stopTyping = startTyping(bot);
     btn.disabled = true;
     let text = "", raf = 0;
-    const paint = () => { raf = 0; if (text) { bot.textContent = text; follow(); } }; // batch DOM work: smooth scrolling on huge answers
+    const paint = () => { raf = 0; if (text) { stopTyping(); rich(bot, text); follow(); } }; // batch DOM work: smooth scrolling on huge answers
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -154,11 +236,7 @@
         let detail = "";
         try { const raw = await res.text(); try { const j = JSON.parse(raw); detail = j.message || j.error || j.detail || raw; } catch { detail = raw; } } catch {}
         detail = String(detail).replace(/\s+/g, " ").slice(0, 160);
-        const hint = res.status === 429 ? "too many messages, slow down"
-          : res.status === 404 ? "the chat endpoint wasn't found — is the site fully deployed?"
-          : res.status >= 500 ? "the chat server hit a problem (is GEMINI_API_KEY or ANTHROPIC_API_KEY set in Vercel, and did you redeploy?)"
-          : "";
-        throw new Error("HTTP " + res.status + (hint ? " — " + hint : "") + (detail && res.status !== 429 ? " [" + detail + "]" : ""));
+        throw new Error("HTTP " + res.status + (detail ? " [" + detail + "]" : ""));
       }
       const reader = res.body.getReader();
       const dec = new TextDecoder();
@@ -183,17 +261,21 @@
       }
       handle(buf);
       if (raf) cancelAnimationFrame(raf);
-      if (!text) { text = "Hmm, I got no answer back. Try again!"; bot.classList.add("err"); }
-      else {
-        const done = Date.now();
-        c.msgs.push({ r: "bot", t: text.slice(0, 20000), ts: done });
-        c.ts = done; bot.dataset.time = "  ·  " + fmtTime(done);
-      }
-      bot.textContent = text;
+      stopTyping();
+      if (!text) throw new Error("empty answer");
+      const done = Date.now();
+      c.msgs.push({ r: "bot", t: text.slice(0, 20000), ts: done });
+      c.ts = done; bot.dataset.time = "  ·  " + fmtTime(done);
+      rich(bot, text); addCopy(bot, text);
     } catch (e) {
       if (raf) cancelAnimationFrame(raf);
-      bot.textContent = "A creeper blew up the connection (" + e.message + "). Try again!";
-      bot.classList.add("err");
+      stopTyping();
+      bot.textContent = friendly(String(e.message || e));
+      bot.title = String(e.message || e);   // the technical reason, visible on hover
+      bot.classList.remove("rich"); bot.classList.add("err");
+      const rb = document.createElement("button"); rb.type = "button"; rb.className = "retry-btn"; rb.textContent = "↻ RETRY";
+      rb.addEventListener("click", () => ask(message, bot));
+      bot.appendChild(rb);
     } finally {
       btn.disabled = false;
       save(); follow();
