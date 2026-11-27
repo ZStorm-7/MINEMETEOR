@@ -179,3 +179,77 @@ body.day .moon{opacity:0}
 /* sky meteors vanish completely once it is day (they fade out first) */
 .m{transition:opacity 4s ease,visibility 0s}
 body.day .m{opacity:0;visibility:hidden;transition:opacity 4s ease,visibility 0s 4s}
+
+/* ===== v2: phone fixes ===== */
+/* the lava pools are placed in 1536px tiles and stuck out past the screen edge; phones then widened the whole layout (input shrank to ~60px) */
+.stone{overflow:hidden}
+html,body{overflow-x:hidden;max-width:100%}
+
+/* phone: the input gets its own full-width row, Menu / History / Send share the row below */
+@media (max-width:640px){
+  .composer{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .composer input{grid-column:1/-1;grid-row:1;min-height:54px}
+  .composer button{min-height:50px;padding:0 4px;font-size:10px}
+  .hero{padding:52px 12px 4px}
+  .hero p{font-size:21px;margin-top:12px}
+  .moon{width:92px;opacity:.5}
+  .chat{padding:0 10px;gap:12px}
+  .log{max-height:50vh}
+  .msg{max-width:96%}
+}
+@media (max-width:360px){.composer button{font-size:9px}.hero p{font-size:19px}}
+
+/* ===== v2: richer chat (all built from DOM nodes in app.js, never innerHTML) ===== */
+.msg{position:relative}
+.msg.rich{white-space:normal}
+.msg.rich p{margin:0 0 8px}
+.msg.rich>:last-child{margin-bottom:0}
+.msg.rich ul,.msg.rich ol{margin:0 0 8px;padding-left:26px}
+.msg.rich li{margin:2px 0}
+.msg.rich li::marker{color:#4f7f2c}
+.msg.rich strong{color:#7a2f00}
+.msg.rich h4{margin:0 0 8px;font:11px/1.5 var(--px);color:#7a2f00;letter-spacing:1px}
+.msg.rich code{padding:0 5px;background:#9b9b9b;color:#111;box-shadow:inset 2px 2px 0 #7b7b7b,inset -2px -2px 0 #bdbdbd}
+.msg.rich pre{margin:0 0 8px;padding:8px 10px;background:#1e1e1e;color:#e6e6e6;overflow-x:auto;border:3px solid #000;box-shadow:inset 3px 3px 0 #0008}
+.msg.rich pre code{padding:0;background:none;box-shadow:none;color:inherit}
+.msg.bot{padding-right:78px}   /* room for the COPY button */
+.msg.bot.typing-wrap,.msg.bot.err{padding-right:14px}
+
+.copy-btn,.retry-btn{border:2px solid #000;background:#8b8b8b;color:#fff;cursor:pointer;font:9px var(--px);letter-spacing:1px;padding:6px 8px;
+  box-shadow:inset 2px 2px 0 #c6c6c6,inset -2px -2px 0 #555;text-shadow:1px 1px 0 #3f3f3f}
+.copy-btn{position:absolute;top:6px;right:8px}
+.copy-btn:hover,.retry-btn:hover{background:#7f86d6;box-shadow:inset 2px 2px 0 #c5caff,inset -2px -2px 0 #3d4287;color:#ffffa0}
+.retry-btn{display:block;margin-top:10px;padding:10px 14px;background:#4f9a2c;box-shadow:inset 3px 3px 0 #8fdc66,inset -3px -3px 0 #2b5c14}
+.retry-btn:hover{background:#5fb338;box-shadow:inset 3px 3px 0 #b0f088,inset -3px -3px 0 #2b5c14}
+
+/* "mining for the answer": swinging pickaxe + rotating status + blinking dots */
+.typing{display:flex;align-items:center;gap:12px;min-height:34px}
+.pick-swing{display:inline-block;font-size:28px;line-height:1;transform-origin:90% 90%;animation:swing .6s steps(4) infinite}
+@keyframes swing{0%,100%{transform:rotate(30deg)}50%{transform:rotate(-40deg)}}
+.typing .dots span{opacity:0;animation:blinkdot 1.2s steps(1) infinite}
+.typing .dots span:nth-child(2){animation-delay:.3s}.typing .dots span:nth-child(3){animation-delay:.6s}
+@keyframes blinkdot{0%{opacity:0}30%,100%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.pick-swing,.typing .dots span{animation:none;opacity:1}}
+
+/* quick-question buttons under the greeting */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.chips button{border:2px solid #000;background:#6f6f6f;color:#fff;cursor:pointer;font:21px/1.1 var(--body);padding:8px 12px;min-height:44px;
+  box-shadow:inset 3px 3px 0 #b4b4b4,inset -3px -3px 0 #3b3b3b;text-shadow:2px 2px 0 #3f3f3f}
+.chips button:hover{background:#7f86d6;box-shadow:inset 3px 3px 0 #c5caff,inset -3px -3px 0 #3d4287;color:#ffffa0}
+.chips button:active{box-shadow:inset 3px 3px 0 #3b3b3b,inset -3px -3px 0 #b4b4b4}
+
+/* FindCraft branding */
+.msg.bot::before{content:"⛏ FINDCRAFT" attr(data-time);color:#3f3f3f}
+
+/* phone: compact header + two-column quick buttons so the whole input area is visible without scrolling */
+@media (max-width:640px){
+  .hero{padding:46px 12px 0}
+  .logo{width:56px;height:56px;margin-bottom:4px}
+  .hero h1{font-size:clamp(20px,7vw,30px)}
+  .hero p{font-size:20px;margin-top:8px}
+  .hero p .more{display:none}
+  .chat{margin:10px auto 18px}
+  .log{min-height:30vh;max-height:42vh}
+  .chips button{flex:1 1 calc(50% - 8px);font-size:19px;padding:6px 8px;min-height:42px}
+}
+.msg.rich code,.msg.rich pre code{font-family:var(--body);font-size:inherit}
